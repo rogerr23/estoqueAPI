@@ -20,7 +20,7 @@ Exemplo: `estoques.produto_id` aponta para `produtos.id`. Assim, o estoque ident
 
 | Escolha | Decisão | Motivo e consequência |
 |---|---|---|
-| Identificadores | `integer` gerado automaticamente, como PK. | Facilita acompanhar registros durante o aprendizado; não substitui autorização na API. |
+| Identificadores | UUIDv4 em produtos, lojas, colaboradores, clientes e transferências; integer em estoque, itens e históricos. | UUID é o identificador técnico dos cadastros e pedidos. Códigos continuam servindo à identificação humana; autorização permanece necessária. |
 | Quantidades | Inteiros positivos nos itens; inteiros não negativos nos saldos. | A V1 trabalha com unidades inteiras. Produtos vendidos por peso, volume ou fração ficam para revisão futura. |
 | Unidade de medida | Apenas `UN` (unidade). | Uma caixa pode ser um produto próprio, como “Caixa de camisas”, contado por unidade. Não há conversão entre caixas e peças. |
 | Preço | `numeric(12,2)`, em reais, não negativo. | Representa um valor decimal exato com duas casas. |
@@ -55,7 +55,7 @@ erDiagram
     COLABORADORES ||--o{ MOVIMENTACOES_ESTOQUE : executa
     HISTORICO_TRANSFERENCIAS o|--o{ MOVIMENTACOES_ESTOQUE : gera
     CLIENTES {
-        integer id PK
+        uuid id PK
         varchar cpf UK
         varchar nome
         varchar status
@@ -72,7 +72,7 @@ Clientes ficam independentes: a V1 não tem vendas ou outro fluxo que associe cl
 
 | Campo | Tipo | Obrigatório | Regra / finalidade |
 |---|---|---|---|
-| `id` | integer | Sim | PK automática. |
+| `id` | uuid | Sim | PK; padrão gen_random_uuid(). |
 | `codigo` | varchar(30) | Sim | UNIQUE; identificação da unidade, como CENTRO. |
 | `nome` | varchar(120) | Sim | Nome da loja. |
 | `telefone` | varchar(20) | Não | Contato. |
@@ -93,7 +93,7 @@ Clientes ficam independentes: a V1 não tem vendas ou outro fluxo que associe cl
 
 | Campo | Tipo | Obrigatório | Regra / finalidade |
 |---|---|---|---|
-| `id` | integer | Sim | PK automática. |
+| `id` | uuid | Sim | PK; padrão gen_random_uuid(). |
 | `codigo` | varchar(50) | Sim | UNIQUE; código comum à rede. |
 | `nome` | varchar(150) | Sim | Nome pesquisável. |
 | `descricao` | text | Não | Informações adicionais. |
@@ -113,8 +113,8 @@ Inativação é bloqueada quando houver transferência aberta, conforme RN20. Pr
 | Campo | Tipo | Obrigatório | Regra / finalidade |
 |---|---|---|---|
 | `id` | integer | Sim | PK automática. |
-| `loja_id` | integer | Sim | FK para lojas. |
-| `produto_id` | integer | Sim | FK para produtos. |
+| `loja_id` | uuid | Sim | FK para lojas. |
+| `produto_id` | uuid | Sim | FK para produtos. |
 | `quantidade_fisica` | integer | Sim | Padrão 0; maior ou igual a zero. |
 | `quantidade_reservada` | integer | Sim | Padrão 0; entre zero e quantidade física. |
 | `criado_em` | timestamptz | Sim | Criação do par produto/loja. |
@@ -139,7 +139,7 @@ Um saldo inicial deve entrar por movimentação ENTRADA, com autor e motivo, inc
 
 | Campo | Tipo | Obrigatório | Regra / finalidade |
 |---|---|---|---|
-| `id` | integer | Sim | PK automática. |
+| `id` | uuid | Sim | PK; padrão gen_random_uuid(). |
 | `nome` | varchar(150) | Sim | Nome completo. |
 | `cpf` | varchar(11) | Sim | UNIQUE, onze dígitos, imutável. |
 | `telefone` | varchar(20) | Sim | Contato. |
@@ -161,8 +161,8 @@ CPF é texto para preservar zeros iniciais. A API remove pontuação e valida fo
 
 | Campo | Tipo | Obrigatório | Regra / finalidade |
 |---|---|---|---|
-| `id` | integer | Sim | PK automática. |
-| `loja_id` | integer | Sim | FK para lojas; todo colaborador tem uma loja. |
+| `id` | uuid | Sim | PK; padrão gen_random_uuid(). |
+| `loja_id` | uuid | Sim | FK para lojas; todo colaborador tem uma loja. |
 | `nome` | varchar(150) | Sim | Nome do usuário. |
 | `email` | varchar(254) | Sim | UNIQUE, normalizado em minúsculas; login. |
 | `senha_hash` | text | Sim | Hash de senha; nunca senha em texto puro. |
@@ -177,12 +177,12 @@ Colaborador inativo não executa operações. Mudança de loja ou perfil não al
 
 | Campo | Tipo | Obrigatório | Regra / finalidade |
 |---|---|---|---|
-| `id` | integer | Sim | PK automática. |
-| `origem_loja_id` | integer | Sim | FK para lojas. |
-| `destino_loja_id` | integer | Sim | FK para lojas; diferente da origem. |
-| `solicitante_id` | integer | Sim | FK para colaboradores. |
+| `id` | uuid | Sim | PK; padrão gen_random_uuid(). |
+| `origem_loja_id` | uuid | Sim | FK para lojas. |
+| `destino_loja_id` | uuid | Sim | FK para lojas; diferente da origem. |
+| `solicitante_id` | uuid | Sim | FK para colaboradores. |
 | `status` | varchar(15) | Sim | SOLICITADA, APROVADA, EM_TRANSITO, RECEBIDA, CONCLUIDA ou CANCELADA. |
-| `duplicada_de_id` | integer | Não | FK para outra transferência; apenas rastreia a duplicação. |
+| `duplicada_de_id` | uuid | Não | FK para outra transferência; apenas rastreia a duplicação. |
 | `observacao` | text | Não | Observação do pedido. |
 | `solicitada_em` | timestamptz | Sim | Data da criação; padrão atual. |
 | `concluida_em` | timestamptz | Não | Preenchida apenas ao concluir. |
@@ -199,8 +199,8 @@ Duplicar copia origem, destino e itens para **um novo pedido**, com novo solicit
 | Campo | Tipo | Obrigatório | Regra / finalidade |
 |---|---|---|---|
 | `id` | integer | Sim | PK automática. |
-| `transferencia_id` | integer | Sim | FK para transferências. |
-| `produto_id` | integer | Sim | FK para produtos. |
+| `transferencia_id` | uuid | Sim | FK para transferências. |
+| `produto_id` | uuid | Sim | FK para produtos. |
 | `quantidade` | integer | Sim | Maior que zero. |
 
 Banco: `UNIQUE (transferencia_id, produto_id)` e `CHECK (quantidade > 0)`. Cada produto aparece uma vez no pedido. A API rejeita produtos repetidos no envio dos dados, com mensagem para corrigir a quantidade em uma única linha.
@@ -212,11 +212,11 @@ Não armazenar preço no item: a transferência movimenta mercadorias e não rep
 | Campo | Tipo | Obrigatório | Regra / finalidade |
 |---|---|---|---|
 | `id` | integer | Sim | PK automática. |
-| `transferencia_id` | integer | Sim | FK para transferências. |
+| `transferencia_id` | uuid | Sim | FK para transferências. |
 | `status_anterior` | varchar(15) | Não | Nulo somente no evento inicial. |
 | `status_novo` | varchar(15) | Sim | Status após a ação. |
-| `colaborador_id` | integer | Sim | FK para autor da ação. |
-| `loja_autor_id` | integer | Sim | FK para loja do autor no momento da ação. |
+| `colaborador_id` | uuid | Sim | FK para autor da ação. |
+| `loja_autor_id` | uuid | Sim | FK para loja do autor no momento da ação. |
 | `perfil_autor` | varchar(20) | Sim | Perfil do autor no momento da ação. |
 | `motivo` | text | Não | Obrigatório no cancelamento, como proposta. |
 | `ocorrido_em` | timestamptz | Sim | Data do evento. |
@@ -237,7 +237,7 @@ Histórico é somente de acréscimo: não permite edição nem exclusão pela ap
 | `delta_fisico` | integer | Sim | Variação física com sinal; padrão 0. |
 | `delta_reservado` | integer | Sim | Variação da reserva com sinal; padrão 0. |
 | `evento_transferencia_id` | integer | Não | FK para histórico de transferências; obrigatório nas movimentações de transferência. |
-| `colaborador_id` | integer | Sim | FK para quem executou a operação. |
+| `colaborador_id` | uuid | Sim | FK para quem executou a operação. |
 | `motivo` | text | Não | Obrigatório em ENTRADA, SAIDA e AJUSTE manuais, como proposta. |
 | `ocorrido_em` | timestamptz | Sim | Data da movimentação. |
 
@@ -345,6 +345,12 @@ Busca parcial por nome deve ser medida com o volume definido para o teste. Um í
 | Cancelar pedido aprovado | Liberar reservas; manter físico; registrar autor e evento. |
 | Concluir transferência | Registrar autor e data; não movimentar saldo. |
 | Produto com disponível 1 ou 0 | Classificar respectivamente como baixo estoque ou sem estoque disponível. |
+
+### Evolução dos identificadores aprovada
+
+Produtos, lojas e colaboradores existentes são convertidos por novas migrations, preservando estoques, movimentações e vínculos. Clientes e transferências usarão UUID desde sua criação. IDs de estoque, itens e históricos continuam inteiros.
+
+Nos três cadastros convertidos, `id_legado` é um campo técnico interno que conserva a identidade anterior para permitir reversão da migration, inclusive para registros criados depois. Não é retornado nem aceito como identificador na API. A chave primária e os relacionamentos usam UUID. As migrations antigas permanecem intactas.
 
 ## 9. Revisão concluída
 

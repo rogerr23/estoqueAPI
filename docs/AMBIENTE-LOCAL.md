@@ -10,7 +10,7 @@
 - Swagger UI em `/docs` e OpenAPI JSON em `/docs-json`.
 - Scripts de lint, verificação de tipos e build.
 
-Não inclui migrations de negócio, cadastros, testes automatizados ou CI; esses são os próximos pontos do plano aprovado.
+O ponto 1 não incluía migrations de negócio, cadastros, testes automatizados ou CI. A consulta e as primeiras migrations foram adicionadas na [entrega 2](CONSULTA-DE-ESTOQUE.md); testes automatizados e CI são as próximas entregas.
 
 ## Por que TypeORM
 

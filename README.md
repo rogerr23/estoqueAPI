@@ -4,7 +4,7 @@ Sistema de consulta de estoque e transferência entre lojas. Requisitos e modelo
 
 ## Ambiente local — ponto 1
 
-Nesta etapa: NestJS 11 com TypeScript, PostgreSQL 17 no Docker Compose e TypeORM para acesso ao banco e migrations. A API roda no computador; o banco roda em container. Ainda não há tabelas de negócio, consulta de estoque, suíte de testes ou pipeline de CI.
+NestJS 11 com TypeScript, PostgreSQL 17 no Docker Compose e TypeORM para acesso ao banco e migrations. A API roda no computador; o banco roda em container. A consulta de produtos e estoque está implementada. A suíte de testes automatizados e o pipeline de CI são as próximas entregas.
 
 ### Pré-requisitos
 
@@ -21,6 +21,7 @@ cp .env.example .env
 docker compose up -d --wait postgres
 cd backend
 npm ci
+npm run migration:run
 npm run start:dev
 ```
 
@@ -72,7 +73,37 @@ npm run migration:create -- src/database/migrations/NomeDaAlteracao
 npm run migration:run
 ```
 
-No ponto 1, a pasta de migrations está vazia; `migration:show` não lista alterações. No próximo ponto serão adicionadas as primeiras tabelas. `migration:revert` desfaz a última migration e só deve ser usado quando essa reversão for desejada.
+As migrations iniciais criam lojas, produtos e estoques, além da base de colaboradores e movimentações para rastrear entradas de demonstração. Histórico e tipos de movimentação relacionados às transferências serão acrescentados quando esse fluxo for implementado. `migration:revert` desfaz a última migration e só deve ser usado quando essa reversão for desejada.
+
+### Dados de demonstração e consulta de estoque
+
+Depois de aplicar migrations, na pasta `backend`:
+
+```sh
+npm run seed:demo
+```
+
+O seed é permitido apenas em `NODE_ENV=development`. Cria lojas Centro e Barra e produtos Notebook (5 unidades no Centro) e Camisa (1 unidade no Centro). Na Barra, os pares sem registro aparecem como zero. Os códigos têm prefixo `DEMO-`. Reexecutar não repete entradas nem redefine saldos de produtos já existentes.
+
+Cada saldo inicial tem uma movimentação ENTRADA, gravada na mesma transação. O autor da carga é um colaborador inativo com senha aleatória não disponibilizada, usado apenas para rastreabilidade; não é uma conta de login. Não há autenticação ou endpoints de alteração de estoque nesta etapa; a API permanece vinculada a localhost.
+
+No Swagger:
+
+1. Execute `GET /produtos` com `busca=Notebook` ou `busca=DEMO-NOTE-001`.
+2. Copie o `id` do produto retornado.
+3. Execute `GET /produtos/{id}/estoques` com esse ID.
+4. Confira Centro com físico 5, reservado 0 e disponível 5; Barra com zero.
+5. Repita com Camisa: Centro aparece como BAIXO_ESTOQUE, pois disponível é exatamente 1.
+
+Busca é por trecho, sem distinção de maiúsculas/minúsculas. `%` e `_` são tratados como caracteres literais. Sem `busca`, a rota lista produtos, até 50 por página, com parâmetro `pagina`. Inclui cadastros inativos; a consulta de estoque também inclui todas as lojas e identifica seu status.
+
+Parâmetros inválidos retornam 400; produto inexistente retorna 404; busca sem correspondência retorna lista vazia. Preço é texto decimal, preservando as duas casas do banco. Disponível é calculado na consulta e não armazenado.
+
+### Identificadores UUID
+
+Produtos, lojas e colaboradores usam UUIDv4 gerado no PostgreSQL. Na consulta, `produto.id` e `lojaId` são strings UUID. Copie o ID retornado pela busca e use-o em `/produtos/{id}/estoques`; IDs inteiros antigos agora retornam 400. UUID válido de produto inexistente retorna 404. Os códigos, como `DEMO-NOTE-001`, continuam disponíveis para busca.
+
+Novas migrations convertem os dados e vínculos existentes sem recriar o banco. `id_legado` preserva internamente os números anteriores para permitir reversão, mas não aparece na API. Estoques e movimentações mantêm IDs internos inteiros. Clientes e transferências usarão UUID quando forem implementados. UUID não substitui autorização.
 
 ### Parar o banco e preservar dados
 
