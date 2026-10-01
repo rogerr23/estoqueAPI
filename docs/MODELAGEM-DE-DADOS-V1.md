@@ -2,7 +2,7 @@
 
 **Status: modelagem aprovada pelo Roger, com ajustes consolidados nesta revisão.**
 
-Este documento transforma os requisitos da [V1](V1-SISTEMA-VAREJO.md) em um modelo relacional para PostgreSQL. Os campos, tipos e decisões abaixo foram aprovados, incluindo os ajustes de unidade de medida e dados obrigatórios do cliente. Nenhum banco ou aplicação foi criado nesta etapa.
+Este documento transforma os requisitos da [V1](V1-SISTEMA-VAREJO.md) em um modelo relacional para PostgreSQL. Os campos, tipos e decisões abaixo foram aprovados, incluindo a remoção do campo de unidade de medida e os dados obrigatórios do cliente. Nenhum banco ou aplicação foi criado nesta etapa.
 
 ## 1. Como ler o modelo
 
@@ -22,7 +22,6 @@ Exemplo: `estoques.produto_id` aponta para `produtos.id`. Assim, o estoque ident
 |---|---|---|
 | Identificadores | UUIDv4 em produtos, lojas, colaboradores, clientes e transferências; integer em estoque, itens e históricos. | UUID é o identificador técnico dos cadastros e pedidos. Códigos continuam servindo à identificação humana; autorização permanece necessária. |
 | Quantidades | Inteiros positivos nos itens; inteiros não negativos nos saldos. | A V1 trabalha com unidades inteiras. Produtos vendidos por peso, volume ou fração ficam para revisão futura. |
-| Unidade de medida | Apenas `UN` (unidade). | Uma caixa pode ser um produto próprio, como “Caixa de camisas”, contado por unidade. Não há conversão entre caixas e peças. |
 | Preço | `numeric(12,2)`, em reais, não negativo. | Representa um valor decimal exato com duas casas. |
 | Datas | `timestamptz`, geradas pelo sistema. | Guardam instantes; telas mostram no fuso America/Sao_Paulo. |
 | Status e tipos | `varchar` com `CHECK` para os valores permitidos. | Deixa os valores explícitos sem exigir tabelas de domínio nesta versão. |
@@ -34,7 +33,7 @@ Exemplo: `estoques.produto_id` aponta para `produtos.id`. Assim, o estoque ident
 | Estoque inexistente | Ausência da combinação produto/loja significa saldo zero na consulta. | Evita criar todos os pares antecipadamente; o registro surge na primeira operação necessária. |
 | Itens da transferência | Imutáveis após a solicitação. | Para corrigir um pedido, administrador cancela antes do envio e cria-se outro pedido. Simplifica a consistência das reservas. |
 
-**Escopo aprovado:** quantidades inteiras e unidade UN. Produtos vendidos por kg, litros ou metros fracionados exigirão revisão futura dos tipos e do critério de baixo estoque.
+**Escopo aprovado:** quantidades inteiras, sem campo de unidade de medida. Produtos vendidos por kg, litros ou metros fracionados exigirão revisão futura dos tipos e do critério de baixo estoque.
 
 ## 3. Visão dos relacionamentos
 
@@ -99,14 +98,13 @@ Clientes ficam independentes: a V1 não tem vendas ou outro fluxo que associe cl
 | `descricao` | text | Não | Informações adicionais. |
 | `categoria` | varchar(80) | Não | Categoria simples. |
 | `preco` | numeric(12,2) | Sim | Maior ou igual a zero. |
-| `unidade_medida` | varchar(2) | Sim | Apenas UN; padrão UN. |
 | `status` | varchar(10) | Sim | ATIVO ou INATIVO; padrão ATIVO. |
 | `criado_em` | timestamptz | Sim | Data de cadastro. |
 | `atualizado_em` | timestamptz | Sim | Data da última edição. |
 
 Quantidade pertence a `estoques`, nunca a `produtos`. Código é normalizado em maiúsculas e sem espaços nas extremidades antes de salvar.
 
-Inativação é bloqueada quando houver transferência aberta, conforme RN20. Produto inativo não entra em novas solicitações, mas seu saldo e histórico permanecem consultáveis. Propõe-se impedir alteração de unidade após existir estoque ou histórico, para não reinterpretar quantidades antigas.
+Inativação é bloqueada quando houver transferência aberta, conforme RN20. Produto inativo não entra em novas solicitações, mas seu saldo e histórico permanecem consultáveis.
 
 ### 4.3. `estoques`
 
@@ -291,7 +289,7 @@ Cada linha gera um evento no histórico da transferência, inclusive solicitar e
 | CPF imutável | API e trigger no banco. |
 | Ao menos um item e histórico inicial | API cria tudo na mesma transação. |
 | Perfil, loja e usuário ativo | API com base na identidade autenticada. |
-| Produto ativo, unidade fixa e bloqueio de inativação | API; operações de criação de pedido e inativação bloqueiam os produtos envolvidos para evitar disputa. |
+| Produto ativo e bloqueio de inativação | API; operações de criação de pedido e inativação bloqueiam os produtos envolvidos para evitar disputa. |
 | Transições legais e correspondência entre item, evento e saldo | API dentro de transação, com bloqueios. |
 | Reserva total igual aos itens de transferências APROVADAS | Serviço de transferência mantém o saldo; consulta de conferência verifica divergências. |
 | Movimento, evento, saldo e status coerentes | Mesma transação; se qualquer gravação falhar, desfazer tudo. |
@@ -354,7 +352,7 @@ Nos três cadastros convertidos, `id_legado` é um campo técnico interno que co
 
 ## 9. Revisão concluída
 
-- [x] Quantidades inteiras e apenas UN, inclusive para um produto cadastrado como caixa.
+- [x] Quantidades inteiras, sem campo de unidade de medida; uma caixa pode ser um produto próprio.
 - [x] Cliente: nome, CPF, telefone, e-mail e endereço principal obrigatórios; complemento opcional.
 - [x] Colaborador: dados de login e vínculo com loja; sem telefone ou endereço residencial na V1.
 - [x] Categoria como texto padronizado e preço único por produto para toda a rede.
@@ -362,7 +360,7 @@ Nos três cadastros convertidos, `id_legado` é um campo técnico interno que co
 - [x] Tabela adicional de histórico e tipos RESERVA/LIBERACAO_RESERVA.
 - [x] Impedir edição de origem, destino e itens após solicitar.
 - [x] Motivo obrigatório para cancelar e SAIDA manual por administrador com motivo.
-- [x] Proteções para inativação de lojas e mudança de unidade de produto.
+- [x] Proteções para inativação de lojas.
 
 Continuam em aberto o tratamento de perdas/divergências após envio e as condições do teste de desempenho. A aprovação desta modelagem não define esses procedimentos. Não há novas tabelas para ocorrências, vendas, fornecedores, notificações ou cloud nesta etapa.
 

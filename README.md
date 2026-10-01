@@ -99,6 +99,37 @@ Busca é por trecho, sem distinção de maiúsculas/minúsculas. `%` e `_` são 
 
 Parâmetros inválidos retornam 400; produto inexistente retorna 404; busca sem correspondência retorna lista vazia. Preço é texto decimal, preservando as duas casas do banco. Disponível é calculado na consulta e não armazenado.
 
+### Cadastro, edição e inativação de produtos
+
+As operações estão disponíveis no Swagger e persistem no PostgreSQL:
+
+| Operação | Rota | Resultado |
+|---|---|---|
+| Cadastrar | POST `/produtos` | 201, produto ATIVO com UUID. |
+| Consultar um | GET `/produtos/{id}` | 200, dados completos do cadastro. |
+| Editar parcialmente | PATCH `/produtos/{id}` | 200, campos atualizados. |
+| Deletar/inativar | DELETE `/produtos/{id}` | 200, status INATIVO; registro, estoque e histórico preservados. |
+
+Exemplo de cadastro:
+
+```json
+{
+  "codigo": "CAMISA-001",
+  "nome": "Camisa azul",
+  "preco": "49.90",
+  "descricao": "Camisa de algodão",
+  "categoria": "Vestuário"
+}
+```
+
+`codigo`, `nome` e `preco` são obrigatórios. O preço é texto decimal com ponto e até duas casas; zero é permitido. `descricao` e `categoria` são opcionais no cadastro. Não há campo de unidade de medida; as quantidades continuam inteiras. Código é normalizado em maiúsculas; campos de texto têm espaços externos removidos.
+
+PATCH recebe só os campos que serão alterados, por exemplo `{"nome":"Camisa vermelha","preco":"59.90"}`. Descrição e categoria aceitam `null` para limpar. ID, status, datas, campos internos e quantidades não podem ser enviados. Atualizações vazias ou inválidas retornam 400; código duplicado retorna 409, mesmo quando pertence a produto inativo; produto ausente retorna 404.
+
+DELETE não exclui fisicamente. Bloqueia produto com reserva e, quando as tabelas de transferências existirem, com pedido aberto. Repetir a inativação mantém o estado sem atualizar a data novamente. Produto inativo continua consultável; reativação ainda não foi implementada. Cadastro não cria saldo: um novo produto aparece zerado em todas as lojas até haver entradas.
+
+Essas rotas são uma etapa local do desenvolvimento, ainda sem login. A restrição de escrita a administradores será implementada com autenticação e autorização antes de disponibilizar a aplicação fora desse ambiente.
+
 ### Identificadores UUID
 
 Produtos, lojas e colaboradores usam UUIDv4 gerado no PostgreSQL. Na consulta, `produto.id` e `lojaId` são strings UUID. Copie o ID retornado pela busca e use-o em `/produtos/{id}/estoques`; IDs inteiros antigos agora retornam 400. UUID válido de produto inexistente retorna 404. Os códigos, como `DEMO-NOTE-001`, continuam disponíveis para busca.

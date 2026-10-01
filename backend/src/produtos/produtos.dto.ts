@@ -4,9 +4,12 @@ export class ProdutoDto {
   @ApiProperty({ format: 'uuid', example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' }) id!: string;
   @ApiProperty({ example: 'DEMO-NOTE-001' }) codigo!: string;
   @ApiProperty({ example: 'Notebook de demonstração' }) nome!: string;
+  @ApiProperty({ type: String, nullable: true }) descricao!: string | null;
+  @ApiProperty({ type: String, nullable: true }) categoria!: string | null;
   @ApiProperty({ example: '3500.00', description: 'Valor decimal em reais, representado como texto.' }) preco!: string;
-  @ApiProperty({ enum: ['UN'] }) unidadeMedida!: string;
   @ApiProperty({ enum: ['ATIVO', 'INATIVO'] }) status!: string;
+  @ApiProperty({ type: String, format: 'date-time' }) criadoEm!: Date;
+  @ApiProperty({ type: String, format: 'date-time' }) atualizadoEm!: Date;
 }
 
 export class EstoqueLojaDto {

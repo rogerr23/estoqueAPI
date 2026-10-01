@@ -35,7 +35,7 @@ As entidades abaixo descrevem os conceitos do sistema. Os detalhes de campos e r
 | Entidade | Para que serve | Informações principais |
 |---|---|---|
 | **Loja** | Identifica cada unidade da rede. | Identificação, nome e dados da unidade. |
-| **Produto** | Mantém o cadastro comum das mercadorias. | ID, código, nome, descrição, categoria, preço, unidade de medida e status. |
+| **Produto** | Mantém o cadastro comum das mercadorias. | ID, código, nome, descrição, categoria, preço e status. |
 | **Estoque** | Controla as quantidades de um produto em uma loja. | Loja, produto, quantidade física e quantidade reservada. A disponível é calculada. |
 | **Cliente** | Centraliza o cadastro dos clientes. | ID, nome, CPF, telefone, e-mail, endereço, data de cadastro e status ATIVO/INATIVO. |
 | **Colaborador** | Identifica quem utiliza o sistema e suas permissões. | Identificação, vínculo com uma loja e perfil FUNCIONÁRIO ou ADMINISTRADOR. |
@@ -174,7 +174,7 @@ Durante o transporte, as 7 unidades estão vinculadas à transferência, fora do
 
 **Cuidados para aplicar essas regras:**
 
-- Quantidades dos itens devem ser maiores que zero e compatíveis com a unidade de medida.
+- Quantidades dos itens devem ser inteiras e maiores que zero.
 - A verificação do estoque e sua reserva devem ocorrer como uma operação indivisível: outra aprovação não pode usar as mesmas unidades no intervalo entre verificar e reservar.
 - Uma consulta anterior não garante saldo na aprovação. O sistema deve verificar todos os itens novamente, considerando o total por produto.
 - Reserva, liberação de reserva, saída e entrada precisam deixar histórico rastreável. A modelagem aprovada registra essas alterações com RESERVA e LIBERACAO_RESERVA.
@@ -356,4 +356,4 @@ O próximo passo é **Modelagem de Dados**, aproveitando os cadastros já estuda
 
 As decisões operacionais do Passo 1 foram aprovadas: envio pela loja de origem, recebimento pela loja de destino, conclusão por administrador, entradas e ajustes manuais por administrador com motivo, operações integrais, bloqueio de inativação durante transferências abertas e baixo estoque com disponível igual a 1.
 
-Permanecem pendentes o procedimento de resolução de ocorrências após envio e as condições do teste de desempenho. A [modelagem aprovada](MODELAGEM-DE-DADOS-V1.md) define os históricos, quantidades inteiras e apenas UN. Uma caixa é cadastrada como produto próprio e contada por unidade. No cliente, nome, CPF, telefone, e-mail e endereço principal são obrigatórios; complemento é opcional.
+Permanecem pendentes o procedimento de resolução de ocorrências após envio e as condições do teste de desempenho. A [modelagem aprovada](MODELAGEM-DE-DADOS-V1.md) define os históricos, quantidades inteiras, sem campo de unidade de medida. Uma caixa é cadastrada como produto próprio e contada por unidade. No cliente, nome, CPF, telefone, e-mail e endereço principal são obrigatórios; complemento é opcional.
