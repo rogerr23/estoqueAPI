@@ -5,10 +5,10 @@ A especificação está em [EstoqueAPI.md](EstoqueAPI.md).
 
 ## Estado atual
 
-Fase 1: base executável com backend, frontend, PostgreSQL, migração inicial,
-entidades, repositories e dados de demonstração. Login, endpoints de negócio,
-Swagger e telas funcionais entram nas próximas fases. Por enquanto o backend
-bloqueia as requisições; a página inicial do frontend apresenta o projeto.
+Fases 1 e 2 concluídas: base executável, autenticação com sessão e CSRF,
+cadastro e consulta de produtos, listagem de lojas e estoque, erros JSON e OpenAPI.
+Transferências/histórico entram na Fase 3; telas funcionais, na Fase 4.
+O frontend ainda apresenta a página inicial do projeto.
 
 ## Requisitos
 
@@ -134,8 +134,11 @@ npm run lint
 npm run build
 ```
 
-Consulte [docs/plano-de-testes.md](docs/plano-de-testes.md) para rastreabilidade
-e [docs/evidencias/fase-1.md](docs/evidencias/fase-1.md) para o resultado deste marco.
+Validação em 03/10/2026: `./mvnw verify` passou com 20 testes, sem falhas,
+erros ou testes ignorados. Inclui 6 testes da base, 12 testes de API/integração
+com MockMvc e PostgreSQL e 2 testes unitários com Mockito. Verificados: sessão,
+proteção contra fixação de sessão, renovação de CSRF, logout, códigos HTTP,
+normalização, duplicidade, limites dos campos, estoque ausente e contrato OpenAPI.
 
 ## Organização
 
@@ -147,5 +150,60 @@ e [docs/evidencias/fase-1.md](docs/evidencias/fase-1.md) para o resultado deste 
 
 ## Próximo marco
 
-Fase 2: autenticação com sessão e CSRF; cadastro e consultas de produtos;
-listagem de lojas e estoque; erros padronizados; OpenAPI e testes correspondentes.
+Fase 3: transferência com transação única, proteção contra concorrência, criação
+do estoque de destino, histórico e testes de saldo exato/insuficiente e rollback.
+
+## API — Fase 2
+
+Todos os endpoints de negócio e a documentação exigem sessão. Somente a obtenção
+de CSRF e o processamento do login são públicos. As respostas são JSON, sem
+redirecionamento para uma página de login.
+
+| Método | Endpoint | Resultado |
+| --- | --- | --- |
+| GET | `/api/auth/csrf` | 200 — token, headerName, parameterName |
+| POST | `/api/auth/login` | 200 — id, nome e email; inicia sessão |
+| POST | `/api/auth/logout` | 204 — encerra sessão |
+| GET | `/api/auth/me` | 200 — funcionário da sessão, sem senha/hash |
+| POST | `/api/produtos` | 201 — produto criado; cabeçalho Location |
+| GET | `/api/produtos` | 200 — produtos em ordem de ID |
+| GET | `/api/produtos/{id}` | 200 — produto |
+| GET | `/api/lojas` | 200 — lojas em ordem de ID |
+| GET | `/api/lojas/{id}/estoque` | 200 — todos os produtos e saldos, incluindo zero |
+
+### Como testar com Postman
+
+1. Envie GET `http://127.0.0.1:8080/api/auth/csrf`. Preserve o cookie de sessão
+   no cookie jar e copie `token` da resposta.
+2. Envie POST `/api/auth/login` com header `X-CSRF-TOKEN` contendo esse token.
+   Use body **x-www-form-urlencoded**, campos `email` e `senha`, com os valores
+   locais do `.env`. O login usa o filtro padrão do Spring Security.
+3. Obtenha um **novo token** via GET `/api/auth/csrf` após autenticar. O token
+   anterior é invalidado pelo Spring Security.
+4. Consulte `/api/auth/me`, `/api/produtos` e `/api/lojas`. Para cadastrar, envie
+   POST `/api/produtos` com o novo token no header, Content-Type application/json
+   e body `{"codigo":" prod-003 ","nome":" Borracha "}`.
+   O resultado usa código `PROD-003` e nome `Borracha`.
+5. Para logout, envie POST `/api/auth/logout` com CSRF válido. A sessão é
+   invalidada; uma nova consulta autenticada retorna 401. Obtenha novamente
+   CSRF antes de iniciar outro login.
+
+Não envie credenciais reais; use exclusivamente o funcionário de demonstração.
+O cadastro aceita código de até 60 caracteres e nome de até 150, após remover
+espaços nas extremidades. O código é normalizado para maiúsculas antes da
+verificação de unicidade; o banco também protege contra cadastros simultâneos.
+
+### Erros
+
+Erros contêm `codigo` e `mensagem`; validações podem incluir `campos`.
+400 indica dados inválidos, 401 autenticação ausente/credenciais inválidas,
+403 CSRF ausente/inválido, 404 recurso inexistente e 409 código duplicado.
+Falhas internas retornam 500 sem detalhes do banco na resposta.
+
+### Swagger / OpenAPI
+
+Com sessão autenticada, consulte `/v3/api-docs` para o contrato JSON e
+`/swagger-ui/index.html` para o Swagger. A documentação também é protegida;
+sem sessão retorna 401. O navegador precisa da sua própria sessão autenticada,
+independente do cookie jar do Postman. O login pela interface será adicionado na
+Fase 4. O contrato documenta o formulário de login, a sessão, CSRF e erros.
