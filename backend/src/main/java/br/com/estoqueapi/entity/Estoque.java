@@ -28,6 +28,16 @@ public class Estoque {
         this.quantidade = quantidade;
     }
 
+    public void debitar(int unidades) {
+        if (unidades <= 0 || unidades > quantidade) throw new IllegalArgumentException("Débito inválido");
+        quantidade -= unidades;
+    }
+
+    public void creditar(int unidades) {
+        if (unidades <= 0) throw new IllegalArgumentException("Crédito inválido");
+        quantidade = Math.addExact(quantidade, unidades);
+    }
+
     public Long getId() { return id; }
     public Loja getLoja() { return loja; }
     public Produto getProduto() { return produto; }

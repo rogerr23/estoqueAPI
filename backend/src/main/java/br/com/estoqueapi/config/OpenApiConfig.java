@@ -20,7 +20,7 @@ public class OpenApiConfig {
             .addProperty("nome", new StringSchema()).addProperty("email", new StringSchema()));
         components.addSchemas("ErroApi", new ObjectSchema()
             .addProperty("codigo", new StringSchema()).addProperty("mensagem", new StringSchema())
-            .addProperty("campos", new MapSchema().additionalProperties(new StringSchema())));
+            .addProperty("campos", new MapSchema().additionalProperties(true)));
         var csrf = new Parameter().name("X-CSRF-TOKEN").in("header").required(true)
             .description("Obtenha em GET /api/auth/csrf; renove após login e logout")
             .schema(new StringSchema());
@@ -40,7 +40,7 @@ public class OpenApiConfig {
                 .addApiResponse("204", new ApiResponse().description("Sessão encerrada"))
                 .addApiResponse("401", new ApiResponse().description("Sem autenticação"))
                 .addApiResponse("403", new ApiResponse().description("CSRF ausente ou inválido")));
-        return new OpenAPI().info(new Info().title("EstoqueAPI").version("0.2.0")
+        return new OpenAPI().info(new Info().title("EstoqueAPI").version("0.3.0")
                 .description("API acadêmica. Login por formulário; sessão e CSRF gerenciados pelo Spring Security."))
             .components(components).addSecurityItem(new SecurityRequirement().addList("sessao"))
             .path("/api/auth/login", new PathItem().post(login))
@@ -57,13 +57,13 @@ public class OpenApiConfig {
                 operation.getResponses().addApiResponse("403", erro("Token CSRF ausente ou inválido"));
             }
             if (path.equals("/api/auth/login")) operation.getResponses().addApiResponse("401", erro("Credenciais inválidas"));
-            if (path.startsWith("/api/produtos") || path.startsWith("/api/lojas")) {
+            if (path.startsWith("/api/produtos") || path.startsWith("/api/lojas") || path.startsWith("/api/transferencias")) {
                 operation.getResponses().addApiResponse("400", erro("Dados inválidos"));
-                if (path.contains("{id}")) operation.getResponses().addApiResponse("404", erro("Recurso inexistente"));
+                if (path.contains("{id}") || (path.equals("/api/transferencias") && method == PathItem.HttpMethod.POST)) operation.getResponses().addApiResponse("404", erro("Recurso inexistente"));
             }
-            if (path.equals("/api/produtos") && method == PathItem.HttpMethod.POST) {
+            if ((path.equals("/api/produtos") || path.equals("/api/transferencias")) && method == PathItem.HttpMethod.POST) {
                 operation.addParametersItem(new Parameter().name("X-CSRF-TOKEN").in("header").required(true).schema(new StringSchema()));
-                operation.getResponses().addApiResponse("409", erro("Código duplicado"));
+                operation.getResponses().addApiResponse("409", erro(path.equals("/api/produtos") ? "Código duplicado" : "Saldo insuficiente ou limite do estoque"));
             }
         }));
     }

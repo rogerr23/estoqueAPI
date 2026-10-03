@@ -1,13 +1,12 @@
 # EstoqueAPI
 
 Sistema acadêmico para consultar estoque por loja e transferir produtos entre lojas.
-A especificação está em [EstoqueAPI.md](EstoqueAPI.md).
 
 ## Estado atual
 
-Fases 1 e 2 concluídas: base executável, autenticação com sessão e CSRF,
-cadastro e consulta de produtos, listagem de lojas e estoque, erros JSON e OpenAPI.
-Transferências/histórico entram na Fase 3; telas funcionais, na Fase 4.
+Fases 1 a 3 concluídas: base executável, autenticação com sessão e CSRF,
+produtos, lojas, estoque, transferências com proteção contra concorrência,
+histórico, erros JSON e OpenAPI. Telas funcionais entram na Fase 4.
 O frontend ainda apresenta a página inicial do projeto.
 
 ## Requisitos
@@ -134,11 +133,21 @@ npm run lint
 npm run build
 ```
 
-Validação em 03/10/2026: `./mvnw verify` passou com 20 testes, sem falhas,
-erros ou testes ignorados. Inclui 6 testes da base, 12 testes de API/integração
-com MockMvc e PostgreSQL e 2 testes unitários com Mockito. Verificados: sessão,
-proteção contra fixação de sessão, renovação de CSRF, logout, códigos HTTP,
-normalização, duplicidade, limites dos campos, estoque ausente e contrato OpenAPI.
+Validação em 03/10/2026: `./mvnw verify` passou com **39 testes**, sem falhas,
+erros ou testes ignorados: 6 da base, 24 de API/integração e 9 unitários.
+Inclui os testes anteriores e transferência válida, quantidade 1, saldo exato,
+saldo insuficiente, destino ausente, entradas inválidas, usuário da sessão,
+histórico ordenado, limite do inteiro, rollback e concorrência com PostgreSQL.
+
+O teste de rollback instala um trigger temporário **somente no banco de testes**:
+ele confirma que o débito já chegou ao banco e provoca falha na gravação do
+histórico. A suíte verifica a restauração dos saldos, a ausência de histórico
+e a remoção do estoque de destino recém-criado. O trigger é removido ao final.
+
+Os testes concorrentes iniciam transações em threads separadas para disputar o
+mesmo saldo, criar um destino em comum e movimentar em sentidos opostos. Asserções
+verificam os saldos finais, o total preservado e o número de registros criados.
+
 
 ## Organização
 
@@ -150,10 +159,10 @@ normalização, duplicidade, limites dos campos, estoque ausente e contrato Open
 
 ## Próximo marco
 
-Fase 3: transferência com transação única, proteção contra concorrência, criação
-do estoque de destino, histórico e testes de saldo exato/insuficiente e rollback.
+Fase 4: telas de login, produtos, consulta de estoque, transferência e histórico,
+com atualização dos saldos, mensagens de sucesso/erro e prevenção de envio repetido.
 
-## API — Fase 2
+## API — Fases 2 e 3
 
 Todos os endpoints de negócio e a documentação exigem sessão. Somente a obtenção
 de CSRF e o processamento do login são públicos. As respostas são JSON, sem
@@ -170,6 +179,8 @@ redirecionamento para uma página de login.
 | GET | `/api/produtos/{id}` | 200 — produto |
 | GET | `/api/lojas` | 200 — lojas em ordem de ID |
 | GET | `/api/lojas/{id}/estoque` | 200 — todos os produtos e saldos, incluindo zero |
+| POST | `/api/transferencias` | 201 — transferência concluída |
+| GET | `/api/transferencias` | 200 — histórico do mais recente para o mais antigo |
 
 ### Como testar com Postman
 
@@ -207,3 +218,56 @@ Com sessão autenticada, consulte `/v3/api-docs` para o contrato JSON e
 sem sessão retorna 401. O navegador precisa da sua própria sessão autenticada,
 independente do cookie jar do Postman. O login pela interface será adicionado na
 Fase 4. O contrato documenta o formulário de login, a sessão, CSRF e erros.
+
+## Transferências — Fase 3
+
+Depois de autenticar e obter o novo CSRF, envie POST `/api/transferencias` com
+Content-Type application/json, o header `X-CSRF-TOKEN` e:
+
+```json
+{
+  "produtoId": 1,
+  "lojaOrigemId": 1,
+  "lojaDestinoId": 2,
+  "quantidade": 10
+}
+```
+
+Use os IDs retornados pelas consultas; IDs não são reiniciados automaticamente.
+Com os dados originais, o caderno passa de 20/5 para 10/15 nas lojas A/B.
+A resposta contém `id`, `produto`, `lojaOrigem`, `lojaDestino`, `quantidade`,
+`dataHora` (Instant em UTC) e `usuario` (id, nome, email; sem senha/hash).
+Responsável e horário são definidos pelo servidor. Campos extras e quantidades
+fracionárias são rejeitados; envie apenas os quatro campos do contrato.
+
+GET `/api/transferencias` retorna apenas operações concluídas, ordenadas por
+horário decrescente e, em caso de empate, ID decrescente. Não há edição,
+cancelamento ou paginação neste MVP.
+
+### Regras e atomicidade
+
+- IDs e quantidade devem ser inteiros positivos; origem e destino são distintos.
+- Produto e lojas precisam existir; estoque ausente significa zero.
+- Saldo insuficiente retorna 409 `SALDO_INSUFICIENTE`, sem movimentação/histórico.
+- O saldo exato pode ser transferido; a origem fica com zero.
+- Destino ausente é criado dentro da mesma transação.
+- Débito, crédito e histórico são confirmados juntos; qualquer falha desfaz tudo.
+- Saldos usam inteiro de 32 bits; ultrapassar 2.147.483.647 no destino retorna
+  409 `LIMITE_ESTOQUE`, sem alterações.
+
+### Concorrência
+
+Cada transferência bloqueia o registro do produto com `PESSIMISTIC_WRITE` antes
+de ler os saldos. Movimentações do mesmo produto aguardam a transação anterior,
+inclusive quando precisam criar um destino inexistente. Produtos diferentes
+podem ser movimentados em paralelo. É uma escolha simples para o volume deste
+MVP; movimentações do mesmo produto entre lojas independentes também são
+serializadas. Futuras operações que alterem saldos precisam seguir esse protocolo.
+
+A suíte confirmou duas solicitações de 8 com saldo 10: uma conclui, a outra recebe
+409; os saldos ficam 2/13 e há somente um registro no histórico. Confirmou também
+créditos simultâneos num destino ausente e transferências em sentidos opostos.
+
+No backend iniciado pelo IntelliJ, também foram conferidos autenticação,
+histórico, contrato OpenAPI e uma tentativa de saldo insuficiente: 409, com
+estoque e histórico preservados. Os dados de demonstração permaneceram intactos.
