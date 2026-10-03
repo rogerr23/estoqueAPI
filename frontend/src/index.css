@@ -1,0 +1,3 @@
+* { box-sizing: border-box; }
+:root { font-family: system-ui, sans-serif; color: #182b40; background: #f3f6fa; font-synthesis: none; }
+body { margin: 0; min-width: 320px; }

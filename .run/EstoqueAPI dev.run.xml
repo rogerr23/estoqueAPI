@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="EstoqueAPI dev" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="estoque-api" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="br.com.estoqueapi.EstoqueApiApplication" />
+    <option name="ACTIVE_PROFILES" value="dev" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/backend" />
+    <method v="2"><option name="Make" enabled="true" /></method>
+  </configuration>
+</component>
