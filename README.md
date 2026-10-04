@@ -4,11 +4,13 @@ Sistema acadêmico para consultar estoque por loja e transferir produtos entre l
 
 ## Estado atual
 
-Fases 1 a 3 concluídas: base executável, autenticação com sessão e CSRF,
-produtos, lojas, estoque, transferências com proteção contra concorrência,
-histórico, erros JSON e OpenAPI. A tela de login da Fase 4 já está disponível,
-com saída, sessão preservada ao recarregar e acesso ao Swagger.
-As telas de produtos, estoque, transferência e histórico ainda serão implementadas.
+Fases 1 a 5 concluídas para o escopo do MVP: base executável, autenticação com
+sessão e CSRF, produtos, estoque, transferências, histórico e interface React.
+Validação final: 39 testes JUnit/MockMvc/integração, 30 cenários da coleção
+Postman (44 asserções), lint, build e fluxo completo pela interface aprovados.
+Plano, resultados sanitizados e oito capturas estão em `docs/`, mantidos localmente
+fora dos commits conforme a organização deste projeto. A coleção executável e
+seu exemplo de ambiente estão em `postman/`, sem credenciais.
 
 ## Requisitos
 
@@ -76,7 +78,7 @@ Reiniciar o backend não reinicia saldos nem duplica registros.
 | Produto | Loja A | Loja B |
 | --- | ---: | ---: |
 | PROD-001 — Caderno | 20 | 5 |
-| PROD-002 — Caneta | 12 | Sem registro (saldo zero na futura consulta) |
+| PROD-002 — Caneta | 12 | Sem registro (consulta retorna saldo zero) |
 
 O funcionário usa `DEMO_EMAIL` e `DEMO_PASSWORD` do `.env`. A senha é gravada com
 BCrypt. Alterar a variável não altera a senha de um usuário já criado.
@@ -156,12 +158,12 @@ verificam os saldos finais, o total preservado e o número de registros criados.
 - `backend/src/main/resources/db/migration/`: esquema versionado com Flyway.
 - `frontend/`: aplicação React e proxy de desenvolvimento.
 - `docs/`: plano de testes e evidências.
-- `postman/`: reservado para a coleção das próximas fases.
+- `postman/`: coleção executável com cenários positivos/negativos e exemplo de ambiente.
 
-## Próximo marco
+## Marcos concluídos
 
-Fase 4: telas de login, produtos, consulta de estoque, transferência e histórico,
-com atualização dos saldos, mensagens de sucesso/erro e prevenção de envio repetido.
+As cinco fases do plano foram concluídas. Funcionalidades adicionais ou critérios
+específicos da disciplina devem ser alinhados antes de ampliar o escopo.
 
 ## API — Fases 2 e 3
 
@@ -326,3 +328,102 @@ com usuário e produto temporários. Foram conferidos cadastro, código duplicad
 estoque ausente como zero, transferência de 3 unidades (10/0 para 7/3), rejeição
 por saldo insuficiente e histórico com responsável e horário. Os registros de
 teste foram removidos sem alterar os produtos de demonstração.
+
+
+## Validação final e coleção Postman
+
+Importe `postman/EstoqueAPI.postman_collection.json` e
+`postman/local.postman_environment.example.json` no Postman. Preencha `baseUrl`,
+`email` e `password` somente no ambiente local. Use um cookie jar vazio para a
+primeira requisição (consulta anônima), depois execute a coleção inteira em ordem.
+O script obtém um token CSRF antes de cada escrita e o cookie da sessão é mantido
+pelo cliente. Não há senha, cookie ou token salvo nos arquivos distribuídos.
+
+Pré-condições: ambiente de teste local com carga `dev`, lojas **Loja A** e
+**Loja B**, produto **PROD-001** e saldo inicial de pelo menos 10 na origem.
+A coleção cria um produto por execução e duas transferências; a segunda devolve
+as 10 unidades à origem. Saldos são restaurados ao terminar com sucesso, mas os
+produtos e o histórico permanecem. Use uma base descartável para a entrega.
+Os testes de rollback e concorrência são executados pelo JUnit, não pelo Postman.
+
+Para repetir a validação HTTP em um ambiente separado:
+
+1. Execute a suíte JUnit seguindo a seção **Testes e verificações**.
+2. Na raiz, carregue `.env.test` e exporte os parâmetros para a API temporária:
+
+```sh
+set -a
+source .env.test
+set +a
+export SPRING_DATASOURCE_URL="${TEST_DATABASE_URL:-jdbc:postgresql://localhost:5434/estoque_test}"
+export SPRING_DATASOURCE_USERNAME="${TEST_DATABASE_USER:-estoque_test}"
+export SPRING_DATASOURCE_PASSWORD="$TEST_DATABASE_PASSWORD"
+# Defina DEMO_EMAIL e DEMO_PASSWORD com valores exclusivos de teste.
+cd backend
+java -jar target/estoque-api-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev --server.port=8081
+```
+
+3. Use `http://127.0.0.1:8081` como `baseUrl` no ambiente local do Postman.
+   Para usar Newman no terminal, salve esse ambiente preenchido como
+   `postman/local.postman_environment.json` (ignorado pelo Git) e execute na raiz:
+
+```sh
+npm exec --yes --package=newman@6.2.2 -- newman run postman/EstoqueAPI.postman_collection.json -e postman/local.postman_environment.json
+```
+
+4. Ao terminar, encerre a API temporária e remova o contêiner de testes usando
+   o comando `down` da seção de testes. Isso não remove o banco de desenvolvimento.
+
+A execução final usou API na porta 8081, PostgreSQL temporário na 5434 e uma cópia
+local da interface na 5174 com proxy para essa API. O ambiente habitual 5173/8080
+não foi modificado. Foram aprovadas 44 asserções Postman, em 30 cenários com
+43 chamadas HTTP contando as consultas auxiliares de CSRF. Resultados sanitizados:
+`docs/evidencias/fase-5/`; rastreabilidade: `docs/plano-de-testes.md`.
+
+### Limitações conhecidas
+
+O escopo é um MVP acadêmico local. Listagens não têm paginação; funcionários
+possuem as mesmas permissões. Lojas, funcionários e saldos iniciais vêm da carga
+de desenvolvimento. Não há entrada de estoque pela interface, administração de
+usuários, recuperação de senha, edição/exclusão de produtos ou cancelamento de
+transferência. O fluxo de ponta a ponta foi verificado pelo navegador com
+capturas; não existe uma suíte E2E reutilizável nem pipeline de CI neste marco.
+O bloqueio por produto serializa transferências do mesmo produto. Não foi definida
+meta de cobertura, carga máxima ou requisito de publicação pela disciplina.
+
+## Rodar tudo com Docker, sem Java ou IntelliJ
+
+Para quem só precisa usar o sistema, instale e abra o Docker Desktop. Extraia o
+projeto e, na raiz, copie `.env.example` para `.env` se esse arquivo ainda não
+existir. Defina senhas locais diferentes em `POSTGRES_PASSWORD` e `DEMO_PASSWORD`.
+
+```sh
+docker compose -f compose.app.yaml up -d --build --wait
+```
+
+Acesse `http://127.0.0.1:8090` e entre com `DEMO_EMAIL`/`DEMO_PASSWORD` do `.env`.
+O Docker constrói backend e frontend e cria o PostgreSQL com dados de demonstração.
+Não é necessário instalar Java, Maven, Node.js, PostgreSQL ou uma IDE no computador.
+O primeiro build depende de internet para baixar imagens e dependências.
+
+O frontend Nginx encaminha API e Swagger ao backend na rede interna do Compose,
+preservando sessão e CSRF. Somente a interface é publicada, em loopback. Esse modo
+usa o projeto Compose `estoqueapi-app` e volume próprios, separados do ambiente
+local de desenvolvimento. Cada computador tem seu banco, sem sincronização.
+
+Para parar mantendo os dados:
+
+```sh
+docker compose -f compose.app.yaml down
+```
+
+Para iniciar novamente, use `up -d --wait`; acrescente `--build` quando houver
+alterações no código. Não use `down -v` para parar: ele apaga o volume de dados.
+Para outra porta, defina `APP_PORT=8091` no `.env` e use a nova porta no navegador.
+Banco e API não são publicados em portas do computador neste modo.
+
+O guia detalhado para iniciantes fica localmente em
+`docs/guia-para-rodar-o-sistema.md`; a versão PDF e o ZIP para compartilhar ficam
+em `output/`. Documentos e pacotes gerados permanecem fora do Git. Envie o ZIP
+junto do PDF, ou disponibilize esta configuração no repositório antes de orientar
+alguém a baixar pelo GitHub. Não envie `.env`, senhas ou o banco local.

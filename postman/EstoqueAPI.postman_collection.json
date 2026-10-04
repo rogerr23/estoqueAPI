@@ -1,0 +1,855 @@
+{
+  "info": {
+    "name": "EstoqueAPI — Validação do MVP",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Executar em ordem, em ambiente local de teste com carga dev e origem com saldo mínimo 10. Usa cookie jar e CSRF renovado em cada escrita. Cria um produto por execução e duas transferências que restauram os saldos ao final; o histórico permanece. Não executar contra produção. Credenciais somente no ambiente local não versionado."
+  },
+  "variable": [
+    {
+      "key": "csrfToken",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.request.method === 'POST' && pm.request.headers.has('X-CSRF-TOKEN')) {",
+          "  pm.sendRequest(pm.variables.get('baseUrl') + '/api/auth/csrf', (error, response) => {",
+          "    if (error || response.code !== 200) throw new Error('Não foi possível obter CSRF');",
+          "    pm.collectionVariables.set('csrfToken', response.json().token);",
+          "  });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 — Sessão anônima",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 — Token antes do login",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/auth/csrf"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Token disponível\", () => pm.expect(pm.response.json().token).to.be.a(\"string\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 — Credenciais inválidas",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "email",
+              "value": "inexistente@example.test",
+              "type": "text"
+            },
+            {
+              "key": "senha",
+              "value": "invalida",
+              "type": "text"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 — Login válido",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "email",
+              "value": "{{email}}",
+              "type": "text"
+            },
+            {
+              "key": "senha",
+              "value": "{{password}}",
+              "type": "text"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set(\"userId\", pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 — Sessão autenticada",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Responsável da sessão\", () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get(\"userId\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 — Produtos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/produtos"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const p=pm.response.json().find(p=>p.codigo===\"PROD-001\"); pm.test(\"Produto de demonstração disponível\",()=>pm.expect(p).to.exist); if(p) pm.collectionVariables.set(\"seedProductId\",p.id); pm.collectionVariables.set(\"newCode\",\"POSTMAN-\"+Date.now());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 — Lojas",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/lojas"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const lojas=pm.response.json(); for (const [key,name] of [[\"originId\",\"Loja A\"],[\"destinationId\",\"Loja B\"]]) { const l=lojas.find(l=>l.nome===name); pm.test(name,()=>pm.expect(l).to.exist); if(l) pm.collectionVariables.set(key,l.id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 — Saldo inicial origin",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/lojas/{{originId}}/estoque"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const p=pm.response.json().find(p=>p.produtoId===Number(pm.collectionVariables.get(\"seedProductId\"))); pm.collectionVariables.set(\"beforeOrigin\",p.quantidade); pm.test(\"Origem permite transferir 10\",()=>pm.expect(p.quantidade).to.be.at.least(10));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 — Saldo inicial destination",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/lojas/{{destinationId}}/estoque"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const p=pm.response.json().find(p=>p.produtoId===Number(pm.collectionVariables.get(\"seedProductId\"))); pm.collectionVariables.set(\"beforeDestination\",p.quantidade);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 — Cadastro normalizado",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/produtos",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"codigo\":\"  {{newCode}}  \",\"nome\":\" Produto Postman \"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+              "const p=pm.response.json(); pm.collectionVariables.set(\"newProductId\",p.id); pm.test(\"Normalização\",()=>{pm.expect(p.codigo).to.eql(pm.collectionVariables.get(\"newCode\"));pm.expect(p.nome).to.eql(\"Produto Postman\");});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 — Consulta por ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/produtos/{{newProductId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 — Código duplicado",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/produtos",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"codigo\":\"{{newCode}}\",\"nome\":\"Duplicado\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 — Campos vazios",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/produtos",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"codigo\": \" \", \"nome\": \"\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 — Produto inexistente",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/produtos/9223372036854775807"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 — Estoque ausente é zero",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/lojas/{{destinationId}}/estoque"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const p=pm.response.json().find(p=>p.produtoId===Number(pm.collectionVariables.get(\"newProductId\"))); pm.test(\"Saldo zero\",()=>pm.expect(p.quantidade).to.eql(0));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 — Quantidade zero",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/transferencias",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"produtoId\":{{seedProductId}},\"lojaOrigemId\":{{originId}},\"lojaDestinoId\":{{destinationId}},\"quantidade\":0}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 — Quantidade fracionária",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/transferencias",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"produtoId\":{{seedProductId}},\"lojaOrigemId\":{{originId}},\"lojaDestinoId\":{{destinationId}},\"quantidade\":1.5}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 — Lojas iguais",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/transferencias",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"produtoId\":{{seedProductId}},\"lojaOrigemId\":{{originId}},\"lojaDestinoId\":{{originId}},\"quantidade\":10}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 — Produto inexistente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/transferencias",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"produtoId\":9223372036854775807,\"lojaOrigemId\":{{originId}},\"lojaDestinoId\":{{destinationId}},\"quantidade\":10}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 — Saldo insuficiente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/transferencias",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"produtoId\":{{seedProductId}},\"lojaOrigemId\":{{originId}},\"lojaDestinoId\":{{destinationId}},\"quantidade\":2147483647}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 — Sem CSRF",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/transferencias",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"produtoId\":{{seedProductId}},\"lojaOrigemId\":{{originId}},\"lojaDestinoId\":{{destinationId}},\"quantidade\":10}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 — Transferência válida",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/transferencias",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"produtoId\":{{seedProductId}},\"lojaOrigemId\":{{originId}},\"lojaDestinoId\":{{destinationId}},\"quantidade\":10}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+              "const t=pm.response.json(); pm.collectionVariables.set(\"transferId\",t.id); pm.test(\"Responsável e quantidade\",()=>{pm.expect(t.usuario.id).to.eql(Number(pm.collectionVariables.get(\"userId\")));pm.expect(t.quantidade).to.eql(10);pm.expect(Number.isNaN(Date.parse(t.dataHora))).to.eql(false);});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 — Conferir saldo origin",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/lojas/{{originId}}/estoque"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const p=pm.response.json().find(p=>p.produtoId===Number(pm.collectionVariables.get(\"seedProductId\")));pm.test(\"Saldo após transferência\",()=>pm.expect(p.quantidade).to.eql(Number(pm.collectionVariables.get(\"beforeOrigin\"))+-10));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24 — Conferir saldo destination",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/lojas/{{destinationId}}/estoque"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const p=pm.response.json().find(p=>p.produtoId===Number(pm.collectionVariables.get(\"seedProductId\")));pm.test(\"Saldo após transferência\",()=>pm.expect(p.quantidade).to.eql(Number(pm.collectionVariables.get(\"beforeDestination\"))+10));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25 — Histórico",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/transferencias"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Transferência registrada\",()=>pm.expect(pm.response.json().some(t=>t.id===Number(pm.collectionVariables.get(\"transferId\")))).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "26 — Retornar as unidades à origem",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/transferencias",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"produtoId\":{{seedProductId}},\"lojaOrigemId\":{{destinationId}},\"lojaDestinoId\":{{originId}},\"quantidade\":10}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "27 — Saldo restaurado origin",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/lojas/{{originId}}/estoque"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const p=pm.response.json().find(p=>p.produtoId===Number(pm.collectionVariables.get(\"seedProductId\")));pm.test(\"Saldo original preservado\",()=>pm.expect(p.quantidade).to.eql(Number(pm.collectionVariables.get(\"beforeOrigin\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "28 — Saldo restaurado destination",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/lojas/{{destinationId}}/estoque"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const p=pm.response.json().find(p=>p.produtoId===Number(pm.collectionVariables.get(\"seedProductId\")));pm.test(\"Saldo original preservado\",()=>pm.expect(p.quantidade).to.eql(Number(pm.collectionVariables.get(\"beforeDestination\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "29 — Logout",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrfToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "30 — Sessão encerrada",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

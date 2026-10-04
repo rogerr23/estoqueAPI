@@ -11,3 +11,13 @@ backend/target/
 frontend/node_modules/
 frontend/dist/
 *.log
+
+# Ambientes Postman locais com credenciais e relatórios brutos
+postman/*.postman_environment.json
+!postman/*.postman_environment.example.json
+postman/newman/
+# Documentação acadêmica e evidências mantidas somente localmente
+/EstoqueAPI.md
+/docs/
+# Pacotes e guias gerados para compartilhar fora do Git
+/output/
