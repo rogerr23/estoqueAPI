@@ -162,7 +162,8 @@ class AcessoConsultasTests {
             .andExpect(jsonPath("paths['/api/auth/logout'].post").exists())
             .andExpect(jsonPath("paths['/api/produtos'].post").exists())
             .andExpect(jsonPath("paths['/api/lojas/{id}/estoque'].get").exists())
-            .andExpect(jsonPath("components.securitySchemes.sessao.name").value("JSESSIONID"));
+            .andExpect(jsonPath("components.securitySchemes.sessao.name").value("JSESSIONID"))
+            .andExpect(jsonPath("servers[0].url").value("/"));
     }
 
     @Test

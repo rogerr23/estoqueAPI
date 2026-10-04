@@ -7,6 +7,10 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 5173,
     strictPort: true,
-    proxy: { '/api': 'http://127.0.0.1:8080' },
+    proxy: {
+      '/api': 'http://127.0.0.1:8080',
+      '/swagger-ui': 'http://127.0.0.1:8080',
+      '/v3/api-docs': 'http://127.0.0.1:8080',
+    },
   },
 })

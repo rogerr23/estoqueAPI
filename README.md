@@ -6,8 +6,9 @@ Sistema acadêmico para consultar estoque por loja e transferir produtos entre l
 
 Fases 1 a 3 concluídas: base executável, autenticação com sessão e CSRF,
 produtos, lojas, estoque, transferências com proteção contra concorrência,
-histórico, erros JSON e OpenAPI. Telas funcionais entram na Fase 4.
-O frontend ainda apresenta a página inicial do projeto.
+histórico, erros JSON e OpenAPI. A tela de login da Fase 4 já está disponível,
+com saída, sessão preservada ao recarregar e acesso ao Swagger.
+As telas de produtos, estoque, transferência e histórico ainda serão implementadas.
 
 ## Requisitos
 
@@ -216,8 +217,8 @@ Falhas internas retornam 500 sem detalhes do banco na resposta.
 Com sessão autenticada, consulte `/v3/api-docs` para o contrato JSON e
 `/swagger-ui/index.html` para o Swagger. A documentação também é protegida;
 sem sessão retorna 401. O navegador precisa da sua própria sessão autenticada,
-independente do cookie jar do Postman. O login pela interface será adicionado na
-Fase 4. O contrato documenta o formulário de login, a sessão, CSRF e erros.
+independente do cookie jar do Postman. Entre pela interface e use **Abrir Swagger**.
+O contrato documenta o formulário de login, a sessão, CSRF e erros.
 
 ## Transferências — Fase 3
 
@@ -271,3 +272,28 @@ créditos simultâneos num destino ausente e transferências em sentidos opostos
 No backend iniciado pelo IntelliJ, também foram conferidos autenticação,
 histórico, contrato OpenAPI e uma tentativa de saldo insuficiente: 409, com
 estoque e histórico preservados. Os dados de demonstração permaneceram intactos.
+
+## Login pela interface e acesso ao Swagger
+
+1. Acesse `http://127.0.0.1:5173/`.
+2. Informe o e-mail de `DEMO_EMAIL` e a senha de `DEMO_PASSWORD` do `.env` local.
+3. Clique em **Entrar**. Credenciais inválidas exibem uma mensagem; durante o
+   envio, o formulário fica desabilitado para evitar solicitações repetidas.
+4. Após entrar, clique em **Abrir Swagger**. Ele abre no endereço do frontend,
+   usando a mesma sessão. Não é necessário usar o console ou preencher Authorize.
+5. Para operações POST, clique em **Copiar token CSRF** na tela da conta e cole
+   no campo `X-CSRF-TOKEN` do Swagger. Se a cópia automática não estiver disponível,
+   o token será exibido para seleção manual. Um novo login exige um novo token.
+6. Use **Sair** para encerrar a sessão. Recarregar a página enquanto autenticado
+   preserva o acesso; depois de sair, a tela pede login novamente.
+
+O Vite encaminha `/api`, `/swagger-ui` e `/v3/api-docs` ao backend. O OpenAPI usa
+um endereço de servidor relativo, permitindo executar chamadas pelo frontend ou
+pelo backend sem depender de uma porta fixa. Isso preserva o uso de cookies da
+sessão sem ampliar a configuração de CORS.
+
+Validação deste marco: lint e build do frontend passaram; os 39 testes do backend
+passaram, incluindo a asserção do endereço relativo do OpenAPI. No navegador,
+foram verificados senha incorreta, login válido, persistência ao recarregar,
+cópia do token, consulta de produtos pelo Swagger com resposta 200 e logout.
+O funcionário temporário usado na verificação foi removido.

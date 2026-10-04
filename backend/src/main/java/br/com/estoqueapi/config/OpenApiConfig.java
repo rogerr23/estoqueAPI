@@ -42,6 +42,7 @@ public class OpenApiConfig {
                 .addApiResponse("403", new ApiResponse().description("CSRF ausente ou inválido")));
         return new OpenAPI().info(new Info().title("EstoqueAPI").version("0.3.0")
                 .description("API acadêmica. Login por formulário; sessão e CSRF gerenciados pelo Spring Security."))
+            .servers(java.util.List.of(new io.swagger.v3.oas.models.servers.Server().url("/")))
             .components(components).addSecurityItem(new SecurityRequirement().addList("sessao"))
             .path("/api/auth/login", new PathItem().post(login))
             .path("/api/auth/logout", new PathItem().post(logout));
