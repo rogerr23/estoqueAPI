@@ -1,8 +1,9 @@
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, campos) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.campos = campos
   }
 }
 
@@ -17,7 +18,7 @@ async function request(path, options = {}) {
   if (response.status === 204) return null
   const data = await response.json().catch(() => null)
   if (!response.ok) {
-    throw new ApiError(data?.mensagem || 'Não foi possível concluir a operação.', response.status)
+    throw new ApiError(data?.mensagem || 'Não foi possível concluir a operação.', response.status, data?.campos)
   }
   return data
 }
@@ -52,3 +53,19 @@ export async function logout() {
     headers: { [csrf.headerName]: csrf.token },
   })
 }
+
+export const products = (signal) => request('/api/produtos', { signal })
+export const stores = (signal) => request('/api/lojas', { signal })
+export const stock = (id, signal) => request(`/api/lojas/${id}/estoque`, { signal })
+export const transfers = (signal) => request('/api/transferencias', { signal })
+
+async function post(path, data) {
+  const csrf = await csrfToken()
+  return request(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token },
+    body: JSON.stringify(data),
+  })
+}
+export const createProduct = (data) => post('/api/produtos', data)
+export const createTransfer = (data) => post('/api/transferencias', data)

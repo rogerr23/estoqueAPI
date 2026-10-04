@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { csrfToken, currentUser, login, logout } from './services/api'
+import Dashboard from './Dashboard'
 import './App.css'
 
 export default function App() {
@@ -104,26 +105,21 @@ export default function App() {
 
       <div className="workspace">
         {loading ? <p className="loading" role="status">Verificando sua sessão…</p> : user ? (
-          <section className="account" aria-labelledby="account-title">
-            <div className="account-header">
-              <span className="eyebrow">SESSÃO ATIVA</span>
-              <button className="text-button" onClick={leave} disabled={busy}>{busy ? 'Aguarde…' : 'Sair'}</button>
-            </div>
-            <h2 id="account-title">Olá, {user.nome}.</h2>
-            <p className="muted">{user.email}</p>
+          <Dashboard user={user} onLeave={leave} busy={busy} onExpired={() => {
+            setUser(null)
+            setTokenFallback('')
+            setNotice('Sua sessão terminou. Entre novamente.')
+          }} apiTools={<div className="api-card">
+            <h3>Acesso à API</h3>
+            <p>Use sua sessão para explorar as operações pelo Swagger.</p>
+            <a className="primary-button" href="/swagger-ui/index.html" target="_blank" rel="noopener noreferrer">Abrir Swagger ↗</a>
+            <button className="secondary-button" onClick={copyToken} disabled={busy}>Copiar token CSRF</button>
+            <p className="help">Cole o token no campo <strong>X-CSRF-TOKEN</strong> das operações POST.</p>
+            {tokenFallback && <label className="token-label">Token CSRF<textarea readOnly value={tokenFallback} onFocus={(event) => event.target.select()} /></label>}
+          </div>} accountMessage={<>
             {error && <p className="message error" role="alert">{error}</p>}
             {notice && <p className="message success" role="status">{notice}</p>}
-            <div className="api-card">
-              <span className="card-icon" aria-hidden="true">↗</span>
-              <h3>Explore o sistema pelo Swagger</h3>
-              <p>Consulte produtos e lojas, faça transferências e veja o histórico usando sua sessão.</p>
-              <a className="primary-button" href="/swagger-ui/index.html" target="_blank" rel="noopener noreferrer">Abrir Swagger <span aria-hidden="true">↗</span></a>
-              <button className="secondary-button" onClick={copyToken} disabled={busy}>Copiar token CSRF</button>
-              <p className="help">Para cadastrar ou transferir, copie o token e cole no campo <strong>X-CSRF-TOKEN</strong> do Swagger.</p>
-              {tokenFallback && <label className="token-label">Token CSRF<textarea readOnly value={tokenFallback} onFocus={(event) => event.target.select()} /></label>}
-            </div>
-            <p className="next-step">As telas de produtos, estoque e transferências serão disponibilizadas no próximo marco.</p>
-          </section>
+          </>} />
         ) : (
           <section className="login-card" aria-labelledby="login-title">
             <span className="eyebrow">BEM-VINDO</span>

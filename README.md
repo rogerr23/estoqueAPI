@@ -279,9 +279,9 @@ estoque e histórico preservados. Os dados de demonstração permaneceram intact
 2. Informe o e-mail de `DEMO_EMAIL` e a senha de `DEMO_PASSWORD` do `.env` local.
 3. Clique em **Entrar**. Credenciais inválidas exibem uma mensagem; durante o
    envio, o formulário fica desabilitado para evitar solicitações repetidas.
-4. Após entrar, clique em **Abrir Swagger**. Ele abre no endereço do frontend,
+4. Após entrar, selecione **API** e clique em **Abrir Swagger**. Ele abre no endereço do frontend,
    usando a mesma sessão. Não é necessário usar o console ou preencher Authorize.
-5. Para operações POST, clique em **Copiar token CSRF** na tela da conta e cole
+5. Para operações POST, clique em **Copiar token CSRF** no módulo **API** e cole
    no campo `X-CSRF-TOKEN` do Swagger. Se a cópia automática não estiver disponível,
    o token será exibido para seleção manual. Um novo login exige um novo token.
 6. Use **Sair** para encerrar a sessão. Recarregar a página enquanto autenticado
@@ -297,3 +297,32 @@ passaram, incluindo a asserção do endereço relativo do OpenAPI. No navegador,
 foram verificados senha incorreta, login válido, persistência ao recarregar,
 cópia do token, consulta de produtos pelo Swagger com resposta 200 e logout.
 O funcionário temporário usado na verificação foi removido.
+
+
+## Interface de gestão de estoque
+
+Após o login, use os módulos no menu:
+
+- **Produtos**: cadastre código e nome; o catálogo inclui os produtos cadastrados.
+  O código é normalizado pela API e duplicidades são rejeitadas.
+- **Estoque**: escolha uma loja para consultar todos os produtos e quantidades.
+  Produtos sem registro de estoque aparecem com zero.
+- **Transferências**: selecione produto, origem, destino e quantidade inteira
+  positiva. Confira os saldos exibidos e clique em **Confirmar transferência**.
+  A API valida o saldo atual e registra o funcionário autenticado e o horário.
+  Após a conclusão, saldos e histórico são consultados novamente.
+- **Histórico**: consulte operações concluídas, com produto, lojas, quantidade,
+  data/hora no fuso do navegador e responsável.
+- **API**: abra o Swagger e copie o token CSRF para operações manuais.
+
+**Atualizar** repete apenas as consultas. Se uma operação concluir e a consulta
+seguinte falhar, a confirmação permanece visível junto ao erro de atualização;
+não reenvie a transferência para atualizar a tela. Os formulários bloqueiam novos
+envios enquanto uma gravação está em andamento. Uma sessão expirada retorna ao
+login. Tabelas largas têm rolagem horizontal em telas menores.
+
+Validação deste marco: lint e build do frontend, mais verificação no navegador
+com usuário e produto temporários. Foram conferidos cadastro, código duplicado,
+estoque ausente como zero, transferência de 3 unidades (10/0 para 7/3), rejeição
+por saldo insuficiente e histórico com responsável e horário. Os registros de
+teste foram removidos sem alterar os produtos de demonstração.
