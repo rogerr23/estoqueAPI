@@ -1,0 +1,49 @@
+# Aplicação completa para uso local, sem Java/Node instalados na máquina.
+name: estoqueapi-app
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-estoque_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-estoque}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
+    volumes:
+      - app_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  backend:
+    build: ./backend
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SERVER_ADDRESS: 0.0.0.0
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-estoque_dev}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-estoque}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
+      DEMO_EMAIL: ${DEMO_EMAIL:-funcionario@example.test}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:?Defina DEMO_PASSWORD no .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/8080"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+  frontend:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:${APP_PORT:-8090}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  app_data:
