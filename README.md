@@ -2,6 +2,9 @@
 
 Sistema acadêmico para consultar estoque por loja e transferir produtos entre lojas.
 
+Para publicar a interface e a API no Render, siga [o guia de publicação](RENDER.md).
+O `render.yaml` da raiz configura uma demonstração com Web Service e PostgreSQL.
+
 ## Estado atual
 
 Fases 1 a 5 concluídas para o escopo do MVP: base executável, autenticação com
@@ -127,6 +130,23 @@ docker compose -p estoqueapi-test -f compose.test.yaml down
 Esse comando remove o contêiner de testes e seus dados temporários. O volume de
 desenvolvimento permanece intacto. Os relatórios ficam em
 `backend/target/surefire-reports/`.
+
+A suíte de integração restringe a conexão ao banco `estoque_test`, usuário
+`estoque_test`, na porta 5434 de `localhost` ou `127.0.0.1`. URLs diferentes em
+`TEST_DATABASE_URL` são rejeitadas antes da conexão. A senha do funcionário de
+teste é gerada em memória a cada processo de testes; ela não é a senha do `.env`.
+
+Para testar a interface contra a API separada na porta 8081:
+
+```sh
+cd frontend
+ESTOQUE_API_PROXY_TARGET=http://127.0.0.1:8081 npm run dev -- --port 5174
+```
+
+A variável altera o proxy do Vite para API e Swagger. Sem ela, permanece a
+configuração local na porta 8080. Evidências da Entrega 2, relatório e código
+de apoio ficam em `output/entrega-2/`, fora do Git. São execuções de 24/10/2026,
+separadas dos resultados históricos de 03/10 descritos abaixo.
 
 No frontend:
 

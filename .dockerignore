@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+**/node_modules
+**/target
+**/dist
+**/*.log
+.idea
+.agents
+.codex
+.aws
+docs
+output

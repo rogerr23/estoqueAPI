@@ -1,0 +1,48 @@
+# Demonstração gratuita: o Postgres Free expira em 30 dias.
+services:
+  - type: web
+    name: estoqueapi
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/auth/csrf
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: dev,render
+      - key: JAVA_TOOL_OPTIONS
+        value: -XX:MaxRAMPercentage=65.0
+      - key: DB_HOST
+        fromDatabase:
+          name: estoqueapi-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: estoqueapi-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: estoqueapi-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: estoqueapi-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: estoqueapi-db
+          property: password
+      - key: DEMO_EMAIL
+        sync: false
+      - key: DEMO_PASSWORD
+        sync: false
+
+databases:
+  - name: estoqueapi-db
+    plan: free
+    region: virginia
+    postgresMajorVersion: "17"
+    databaseName: estoque
+    user: estoque
+    ipAllowList: []

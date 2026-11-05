@@ -8,9 +8,9 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      '/api': 'http://127.0.0.1:8080',
-      '/swagger-ui': 'http://127.0.0.1:8080',
-      '/v3/api-docs': 'http://127.0.0.1:8080',
+      '/api': process.env.ESTOQUE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
+      '/swagger-ui': process.env.ESTOQUE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
+      '/v3/api-docs': process.env.ESTOQUE_API_PROXY_TARGET || 'http://127.0.0.1:8080',
     },
   },
 })

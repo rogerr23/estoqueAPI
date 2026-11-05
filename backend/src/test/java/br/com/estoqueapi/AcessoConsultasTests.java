@@ -16,11 +16,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties = {"app.demo.email=teste@example.test", "app.demo.password=senha-exclusiva-teste"})
+@SpringBootTest(properties = {"app.demo.email=teste@example.test"})
 @ActiveProfiles({"dev", "test"})
 @AutoConfigureMockMvc
 @Transactional
-class AcessoConsultasTests {
+class AcessoConsultasTests extends DatabaseTestSupport {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired ProdutoRepository produtos;
@@ -29,7 +29,7 @@ class AcessoConsultasTests {
 
     private MockHttpSession login() throws Exception {
         return (MockHttpSession) mvc.perform(post("/api/auth/login").with(csrf())
-                .param("email", "teste@example.test").param("senha", "senha-exclusiva-teste"))
+                .param("email", "teste@example.test").param("senha", PASSWORD))
             .andExpect(status().isOk()).andExpect(jsonPath("email").value("teste@example.test"))
             .andExpect(jsonPath("senhaHash").doesNotExist()).andReturn().getRequest().getSession(false);
     }
@@ -41,7 +41,7 @@ class AcessoConsultasTests {
         var token = json.readTree(inicial.getResponse().getContentAsString()).get("token").asText();
         String idAnterior = sessao.getId();
         mvc.perform(post("/api/auth/login").session(sessao).header("X-CSRF-TOKEN", token)
-                .param("email", "teste@example.test").param("senha", "senha-exclusiva-teste"))
+                .param("email", "teste@example.test").param("senha", PASSWORD))
             .andExpect(status().isOk());
         assertThat(sessao.getId()).isNotEqualTo(idAnterior);
         mvc.perform(get("/api/auth/me").session(sessao)).andExpect(status().isOk())
@@ -66,6 +66,7 @@ class AcessoConsultasTests {
             .andExpect(jsonPath("codigo").value("CREDENCIAIS_INVALIDAS"));
         mvc.perform(post("/api/auth/login").with(csrf()).param("email", "ausente@example.test").param("senha", "errada"))
             .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -80,8 +81,12 @@ class AcessoConsultasTests {
 
     @Test
     void csrfProtegeLoginCadastroELogout() throws Exception {
-        mvc.perform(post("/api/auth/login").param("email", "teste@example.test").param("senha", "senha-exclusiva-teste"))
+        mvc.perform(post("/api/auth/login").param("email", "teste@example.test").param("senha", PASSWORD))
             .andExpect(status().isForbidden()).andExpect(jsonPath("codigo").value("CSRF_INVALIDO"));
+        mvc.perform(post("/api/auth/login").with(csrf().useInvalidToken())
+                .param("email", "teste@example.test").param("senha", PASSWORD))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
         var sessao = login();
         long antes = produtos.count();
         mvc.perform(post("/api/produtos").session(sessao).contentType("application/json").content("{}"))
@@ -126,6 +131,7 @@ class AcessoConsultasTests {
             mvc.perform(post("/api/produtos").session(sessao).with(csrf()).contentType("application/json").content(entrada))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("codigo").value("DADOS_INVALIDOS"))
                 .andExpect(jsonPath("campos").isMap());
+            assertThat(produtos.count()).isEqualTo(2);
         }
         mvc.perform(post("/api/produtos").session(sessao).with(csrf()).contentType("application/json").content("{"))
             .andExpect(status().isBadRequest());
@@ -168,9 +174,13 @@ class AcessoConsultasTests {
 
     @Test
     void aceitaTamanhosMaximosPermitidos() throws Exception {
+        long antes = produtos.count();
         mvc.perform(post("/api/produtos").session(login()).with(csrf()).contentType("application/json")
                 .content(json.writeValueAsString(java.util.Map.of("codigo", "X".repeat(60), "nome", "N".repeat(150)))))
-            .andExpect(status().isCreated());
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("codigo").value("X".repeat(60)))
+            .andExpect(jsonPath("nome").value("N".repeat(150)));
+        assertThat(produtos.count()).isEqualTo(antes + 1);
     }
 
     @Test

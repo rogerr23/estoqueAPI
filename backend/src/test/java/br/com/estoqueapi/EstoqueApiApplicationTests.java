@@ -13,11 +13,10 @@ import org.springframework.test.context.ActiveProfiles;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest(properties = {
-    "app.demo.email=teste@example.test",
-    "app.demo.password=senha-exclusiva-teste"
+    "app.demo.email=teste@example.test"
 })
 @ActiveProfiles({"dev", "test"})
-class EstoqueApiApplicationTests {
+class EstoqueApiApplicationTests extends DatabaseTestSupport {
     @Autowired UsuarioRepository usuarios;
     @Autowired LojaRepository lojas;
     @Autowired ProdutoRepository produtos;
@@ -35,8 +34,8 @@ class EstoqueApiApplicationTests {
         assertThat(estoques.count()).isEqualTo(3);
         assertThat(transferencias.count()).isZero();
         var usuario = usuarios.findByEmail("teste@example.test").orElseThrow();
-        assertThat(usuario.getSenhaHash()).isNotEqualTo("senha-exclusiva-teste");
-        assertThat(encoder.matches("senha-exclusiva-teste", usuario.getSenhaHash())).isTrue();
+        assertThat(usuario.getSenhaHash()).isNotEqualTo(PASSWORD);
+        assertThat(encoder.matches(PASSWORD, usuario.getSenhaHash())).isTrue();
         var caderno = produtos.findByCodigo("PROD-001").orElseThrow();
         var a = lojas.findFirstByNomeOrderByIdAsc("Loja A").orElseThrow();
         var b = lojas.findFirstByNomeOrderByIdAsc("Loja B").orElseThrow();

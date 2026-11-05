@@ -23,10 +23,10 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties = {"app.demo.email=teste@example.test", "app.demo.password=senha-exclusiva-teste"})
+@SpringBootTest(properties = {"app.demo.email=teste@example.test"})
 @ActiveProfiles({"dev", "test"})
 @AutoConfigureMockMvc
-class TransferenciaIntegrationTests {
+class TransferenciaIntegrationTests extends DatabaseTestSupport {
     @Autowired TransferenciaService service;
     @Autowired ProdutoRepository produtos;
     @Autowired LojaRepository lojas;
@@ -71,7 +71,7 @@ class TransferenciaIntegrationTests {
     }
     MockHttpSession login() throws Exception {
         return (MockHttpSession) mvc.perform(post("/api/auth/login").with(csrf())
-                .param("email", "teste@example.test").param("senha", "senha-exclusiva-teste"))
+                .param("email", "teste@example.test").param("senha", PASSWORD))
             .andExpect(status().isOk()).andReturn().getRequest().getSession(false);
     }
     void verificarIntacto() {
@@ -105,6 +105,8 @@ class TransferenciaIntegrationTests {
         assertThat(saldo(a)).isEqualTo(19);
         assertThat(saldo(c)).isEqualTo(1);
         assertThat(estoques.findByLojaIdAndProdutoId(c.getId(), produto.getId())).isPresent();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM estoques WHERE loja_id = ? AND produto_id = ?",
+            Long.class, c.getId(), produto.getId())).isEqualTo(1);
     }
 
     @Test
@@ -118,10 +120,16 @@ class TransferenciaIntegrationTests {
     }
 
     @Test
-    void limiteDoInteiroNaoDebitaOrigem() {
+    void limiteDoInteiroNaoDebitaOrigem() throws Exception {
         jdbc.update("UPDATE estoques SET quantidade = ? WHERE loja_id = ? AND produto_id = ?", Integer.MAX_VALUE, b.getId(), produto.getId());
         assertThatThrownBy(() -> service.transferir(entrada(a, b, 1), usuarioId))
             .isInstanceOfSatisfying(NegocioException.class, e -> assertThat(e.getCodigo()).isEqualTo("LIMITE_ESTOQUE"));
+        assertThat(saldo(a)).isEqualTo(20);
+        assertThat(saldo(b)).isEqualTo(Integer.MAX_VALUE);
+        assertThat(historicos()).isZero();
+        mvc.perform(post("/api/transferencias").session(login()).with(csrf()).contentType("application/json")
+                .content(json.writeValueAsString(entrada(a,b,1))))
+            .andExpect(status().isConflict()).andExpect(jsonPath("codigo").value("LIMITE_ESTOQUE"));
         assertThat(saldo(a)).isEqualTo(20);
         assertThat(saldo(b)).isEqualTo(Integer.MAX_VALUE);
         assertThat(historicos()).isZero();
@@ -164,10 +172,15 @@ class TransferenciaIntegrationTests {
         var sessao = login();
         mvc.perform(post("/api/transferencias").session(sessao).contentType("application/json")
                 .content(json.writeValueAsString(entrada(a,b,1)))).andExpect(status().isForbidden());
+        mvc.perform(post("/api/transferencias").session(sessao).with(csrf().useInvalidToken()).contentType("application/json")
+                .content(json.writeValueAsString(entrada(a,b,1)))).andExpect(status().isForbidden());
         verificarIntacto();
         mvc.perform(post("/api/transferencias").session(sessao).with(csrf()).contentType("application/json")
                 .content(json.writeValueAsString(entrada(a,b,10))))
             .andExpect(status().isCreated()).andExpect(jsonPath("quantidade").value(10))
+            .andExpect(jsonPath("produto.id").value(produto.getId()))
+            .andExpect(jsonPath("lojaOrigem.id").value(a.getId()))
+            .andExpect(jsonPath("lojaDestino.id").value(b.getId()))
             .andExpect(jsonPath("usuario.id").value(usuarioId))
             .andExpect(jsonPath("usuario.senhaHash").doesNotExist()).andExpect(jsonPath("dataHora").exists());
         var segundo = service.transferir(entrada(b,a,1),usuarioId);
