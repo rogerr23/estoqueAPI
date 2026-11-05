@@ -1,0 +1,23 @@
+{
+  "data": "2026-10-24",
+  "timezone": "America/Sao_Paulo",
+  "commitBase": "a84a4f8d3cef994b006afec54c4c2bebf8b9d447",
+  "versaoLocal": "testes ampliados e configuracao Vite; sem commit",
+  "executor": "Codex nesta sessao",
+  "revisorHumano": "pendente",
+  "banco": "estoque_test:5434, usuario estoque_test, tmpfs",
+  "api": "127.0.0.1:8081",
+  "frontend": [
+    "127.0.0.1:5174",
+    "127.0.0.1:5175 (CT25)"
+  ],
+  "baselineTermino": "2026-10-24T17:28:26-03:00",
+  "regressaoTermino": "2026-10-24T17:33:24-03:00",
+  "casosAcademicos": 25,
+  "aprovados": 25,
+  "criticos": 18,
+  "junitExecucoesPorRodada": 39,
+  "postmanCenarios": 30,
+  "postmanAssercoes": 44,
+  "defeitosFuncionaisNovos": 0
+}

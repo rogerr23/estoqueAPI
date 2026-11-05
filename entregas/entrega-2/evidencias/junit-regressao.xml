@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites rodada="regressao" data="2026-10-24" versao="a84a4f8d3cef994b006afec54c4c2bebf8b9d447 com alteracoes locais identificadas por SHA256">
+  <testsuite name="br.com.estoqueapi.AcessoConsultasTests" tests="12" errors="0" failures="0" skipped="0" time="1.118" timestamp="">
+    <testcase name="sessaoCsrfFixationERenovacaoLogoutFuncionam" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.119" />
+    <testcase name="cadastraNormalizaEConsultaProduto" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.108" />
+    <testcase name="openApiIncluiEndpointsEAutenticacao" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.09" />
+    <testcase name="exigeAutenticacaoNasConsultasEDocumentacao" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.007" />
+    <testcase name="logoutAnonimoELoginHtmlNaoSaoPublicos" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.005" />
+    <testcase name="validaCamposLimitesEJson" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.111" />
+    <testcase name="aceitaTamanhosMaximosPermitidos" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.102" />
+    <testcase name="rejeitaCodigoDuplicadoNormalizado" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.096" />
+    <testcase name="csrfProtegeLoginCadastroELogout" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.092" />
+    <testcase name="recursoInexistenteEIdInvalidoRetornamErrosClaros" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.099" />
+    <testcase name="listaLojasEIncluiEstoqueZeroSemCriarRegistro" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.104" />
+    <testcase name="rejeitaCredenciaisInvalidasSemRedirecionamento" classname="br.com.estoqueapi.AcessoConsultasTests" time="0.168" />
+  </testsuite>
+  <testsuite name="br.com.estoqueapi.EstoqueApiApplicationTests" tests="6" errors="0" failures="0" skipped="0" time="4.121" timestamp="">
+    <testcase name="bancoRejeitaCodigoDuplicadoENaoNormalizado" classname="br.com.estoqueapi.EstoqueApiApplicationTests" time="0.34" />
+    <testcase name="bancoRejeitaSaldoNegativoEEstoqueDuplicado" classname="br.com.estoqueapi.EstoqueApiApplicationTests" time="0.015" />
+    <testcase name="repetirCargaNaoDuplicaDadosNemReiniciaSaldo" classname="br.com.estoqueapi.EstoqueApiApplicationTests" time="0.064" />
+    <testcase name="carregaDadosConhecidosComSenhaProtegida" classname="br.com.estoqueapi.EstoqueApiApplicationTests" time="0.127" />
+    <testcase name="bancoRejeitaTransferenciaComMesmaLojaOuQuantidadeZero" classname="br.com.estoqueapi.EstoqueApiApplicationTests" time="0.02" />
+    <testcase name="bancoRejeitaReferenciaInexistente" classname="br.com.estoqueapi.EstoqueApiApplicationTests" time="0.003" />
+  </testsuite>
+  <testsuite name="br.com.estoqueapi.ProdutoServiceTests" tests="2" errors="0" failures="0" skipped="0" time="0.006" timestamp="">
+    <testcase name="traduzDuplicacaoMesmoQuandoPreConsultaNaoEncontraCodigo" classname="br.com.estoqueapi.ProdutoServiceTests" time="0.002" />
+    <testcase name="naoDisfarcaOutrasFalhasDePersistenciaComoDuplicacao" classname="br.com.estoqueapi.ProdutoServiceTests" time="0.002" />
+  </testsuite>
+  <testsuite name="br.com.estoqueapi.TransferenciaIntegrationTests" tests="12" errors="0" failures="0" skipped="0" time="2.674" timestamp="">
+    <testcase name="saldoInsuficienteOuOrigemAusenteNaoAlteraNada" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.084" />
+    <testcase name="transferenciaValidaPreservaTotalERegistraResponsavelEHorario" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.055" />
+    <testcase name="limiteDoInteiroNaoDebitaOrigem" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.343" />
+    <testcase name="openApiDocumentaTransferenciaHistoricoECsrf" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.437" />
+    <testcase name="falhaNoHistoricoAposDebitoRealDesfazSaldosENovoDestino" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.323" />
+    <testcase name="apiValidaQuantidadeLojasERecursosSemAlterarSaldos" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.234" />
+    <testcase name="transferenciasEmSentidosOpostosNaoTravemNemPercamAtualizacoes" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.072" />
+    <testcase name="concorrenciaCriaUmUnicoDestinoSemPerderCreditos" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.052" />
+    <testcase name="apiExigeSessaoECsrfEDevolveHistoricoSeguroOrdenado" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.215" />
+    <testcase name="concorrenciaNaoPermiteGastarMesmoSaldoDuasVezes" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.047" />
+    <testcase name="permiteConsumirSaldoExato" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.036" />
+    <testcase name="criaDestinoAusenteEAceitaUmaUnidade" classname="br.com.estoqueapi.TransferenciaIntegrationTests" time="0.04" />
+  </testsuite>
+  <testsuite name="br.com.estoqueapi.TransferenciaServiceTests" tests="7" errors="0" failures="0" skipped="0" time="0.375" timestamp="">
+    <testcase name="destinoAusenteComecaComZero" classname="br.com.estoqueapi.TransferenciaServiceTests" time="0.332" />
+    <testcase name="rejeitaQuantidadeInvalidaAntesDeAcessarBanco(int)[1]" classname="br.com.estoqueapi.TransferenciaServiceTests" time="0.007" />
+    <testcase name="rejeitaQuantidadeInvalidaAntesDeAcessarBanco(int)[2]" classname="br.com.estoqueapi.TransferenciaServiceTests" time="0.003" />
+    <testcase name="rejeitaLojasIguais" classname="br.com.estoqueapi.TransferenciaServiceTests" time="0.003" />
+    <testcase name="saldoInsuficienteNaoGravaDestinoNemHistorico" classname="br.com.estoqueapi.TransferenciaServiceTests" time="0.003" />
+    <testcase name="transfereSaldoParcialOuExatoEGravaAposSaldos(int)[1]" classname="br.com.estoqueapi.TransferenciaServiceTests" time="0.005" />
+    <testcase name="transfereSaldoParcialOuExatoEGravaAposSaldos(int)[2]" classname="br.com.estoqueapi.TransferenciaServiceTests" time="0.003" />
+  </testsuite>
+</testsuites>

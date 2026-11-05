@@ -1,0 +1,607 @@
+{
+  "ferramenta": "Newman 6.2.2",
+  "baseUrl": "http://127.0.0.1:8081",
+  "timings": {
+    "responseAverage": 36.51162790697674,
+    "responseMin": 2,
+    "responseMax": 652,
+    "responseSd": 102.58028553806454,
+    "dnsAverage": 0,
+    "dnsMin": 0,
+    "dnsMax": 0,
+    "dnsSd": 0,
+    "firstByteAverage": 0,
+    "firstByteMin": 0,
+    "firstByteMax": 0,
+    "firstByteSd": 0,
+    "started": 1792873758419,
+    "completed": 1792873760451
+  },
+  "stats": {
+    "iterations": {
+      "total": 1,
+      "pending": 0,
+      "failed": 0
+    },
+    "items": {
+      "total": 30,
+      "pending": 0,
+      "failed": 0
+    },
+    "scripts": {
+      "total": 60,
+      "pending": 0,
+      "failed": 0
+    },
+    "prerequests": {
+      "total": 30,
+      "pending": 0,
+      "failed": 0
+    },
+    "requests": {
+      "total": 43,
+      "pending": 0,
+      "failed": 0
+    },
+    "tests": {
+      "total": 30,
+      "pending": 0,
+      "failed": 0
+    },
+    "assertions": {
+      "total": 44,
+      "pending": 0,
+      "failed": 0
+    },
+    "testScripts": {
+      "total": 30,
+      "pending": 0,
+      "failed": 0
+    },
+    "prerequestScripts": {
+      "total": 30,
+      "pending": 0,
+      "failed": 0
+    }
+  },
+  "failures": 0,
+  "executions": [
+    {
+      "name": "01 — Sessão anônima",
+      "method": "GET",
+      "status": 401,
+      "assertions": [
+        {
+          "name": "HTTP 401",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "02 — Token antes do login",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Token disponível",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "03 — Credenciais inválidas",
+      "method": "POST",
+      "status": 401,
+      "assertions": [
+        {
+          "name": "HTTP 401",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "03 — Credenciais inválidas",
+      "method": "POST",
+      "status": 401,
+      "assertions": [
+        {
+          "name": "HTTP 401",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "04 — Login válido",
+      "method": "POST",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "04 — Login válido",
+      "method": "POST",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "05 — Sessão autenticada",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Responsável da sessão",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "06 — Produtos",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Produto de demonstração disponível",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "07 — Lojas",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Loja A",
+          "passed": true
+        },
+        {
+          "name": "Loja B",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "08 — Saldo inicial origin",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Origem permite transferir 10",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "09 — Saldo inicial destination",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "10 — Cadastro normalizado",
+      "method": "POST",
+      "status": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Normalização",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "10 — Cadastro normalizado",
+      "method": "POST",
+      "status": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Normalização",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "11 — Consulta por ID",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "12 — Código duplicado",
+      "method": "POST",
+      "status": 409,
+      "assertions": [
+        {
+          "name": "HTTP 409",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "12 — Código duplicado",
+      "method": "POST",
+      "status": 409,
+      "assertions": [
+        {
+          "name": "HTTP 409",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "13 — Campos vazios",
+      "method": "POST",
+      "status": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "13 — Campos vazios",
+      "method": "POST",
+      "status": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "14 — Produto inexistente",
+      "method": "GET",
+      "status": 404,
+      "assertions": [
+        {
+          "name": "HTTP 404",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "15 — Estoque ausente é zero",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Saldo zero",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "16 — Quantidade zero",
+      "method": "POST",
+      "status": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "16 — Quantidade zero",
+      "method": "POST",
+      "status": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "17 — Quantidade fracionária",
+      "method": "POST",
+      "status": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "17 — Quantidade fracionária",
+      "method": "POST",
+      "status": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "18 — Lojas iguais",
+      "method": "POST",
+      "status": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "18 — Lojas iguais",
+      "method": "POST",
+      "status": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "19 — Produto inexistente",
+      "method": "POST",
+      "status": 404,
+      "assertions": [
+        {
+          "name": "HTTP 404",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "19 — Produto inexistente",
+      "method": "POST",
+      "status": 404,
+      "assertions": [
+        {
+          "name": "HTTP 404",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "20 — Saldo insuficiente",
+      "method": "POST",
+      "status": 409,
+      "assertions": [
+        {
+          "name": "HTTP 409",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "20 — Saldo insuficiente",
+      "method": "POST",
+      "status": 409,
+      "assertions": [
+        {
+          "name": "HTTP 409",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "21 — Sem CSRF",
+      "method": "POST",
+      "status": 403,
+      "assertions": [
+        {
+          "name": "HTTP 403",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "22 — Transferência válida",
+      "method": "POST",
+      "status": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Responsável e quantidade",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "22 — Transferência válida",
+      "method": "POST",
+      "status": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Responsável e quantidade",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "23 — Conferir saldo origin",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Saldo após transferência",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "24 — Conferir saldo destination",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Saldo após transferência",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "25 — Histórico",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Transferência registrada",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "26 — Retornar as unidades à origem",
+      "method": "POST",
+      "status": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "26 — Retornar as unidades à origem",
+      "method": "POST",
+      "status": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "27 — Saldo restaurado origin",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Saldo original preservado",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "28 — Saldo restaurado destination",
+      "method": "GET",
+      "status": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Saldo original preservado",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "29 — Logout",
+      "method": "POST",
+      "status": 204,
+      "assertions": [
+        {
+          "name": "HTTP 204",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "29 — Logout",
+      "method": "POST",
+      "status": 204,
+      "assertions": [
+        {
+          "name": "HTTP 204",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "30 — Sessão encerrada",
+      "method": "GET",
+      "status": 401,
+      "assertions": [
+        {
+          "name": "HTTP 401",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}

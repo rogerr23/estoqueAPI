@@ -1,0 +1,8 @@
+QA documental em 24/10/2026
+PDF final: 18 paginas renderizadas e revisadas visualmente.
+Matriz: CT01 a CT25, sem lacunas ou IDs novos; 18 prioridades altas.
+JUnit baseline e regressao: 39 execucoes cada; zero falhas, erros ou ignorados.
+Postman: 30 cenarios, 44 assercoes, zero falhas.
+Auditoria de privacidade: nenhuma senha local encontrada nos arquivos exportados ou no texto extraido do PDF; XML sem properties/system-out; Newman sem headers/corpos/variaveis.
+Comandos git diff --check e bash -n do roteiro de regressao sem erros.
+Nao houve commit ou push.

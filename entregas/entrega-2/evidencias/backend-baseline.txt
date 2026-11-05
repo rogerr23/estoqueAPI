@@ -1,0 +1,8 @@
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.221 s -- in br.com.estoqueapi.EstoqueApiApplicationTests
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.467 s -- in br.com.estoqueapi.TransferenciaServiceTests
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.548 s -- in br.com.estoqueapi.TransferenciaIntegrationTests
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.317 s -- in br.com.estoqueapi.AcessoConsultasTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in br.com.estoqueapi.ProdutoServiceTests
+[INFO] Tests run: 39, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+[INFO] Finished at: 2026-10-24T17:28:26-03:00

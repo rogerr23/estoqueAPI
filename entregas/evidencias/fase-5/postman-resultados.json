@@ -1,0 +1,546 @@
+{
+  "stats": {
+    "iterations": {
+      "total": 1,
+      "pending": 0,
+      "failed": 0
+    },
+    "items": {
+      "total": 30,
+      "pending": 0,
+      "failed": 0
+    },
+    "scripts": {
+      "total": 60,
+      "pending": 0,
+      "failed": 0
+    },
+    "prerequests": {
+      "total": 30,
+      "pending": 0,
+      "failed": 0
+    },
+    "requests": {
+      "total": 43,
+      "pending": 0,
+      "failed": 0
+    },
+    "tests": {
+      "total": 30,
+      "pending": 0,
+      "failed": 0
+    },
+    "assertions": {
+      "total": 44,
+      "pending": 0,
+      "failed": 0
+    },
+    "testScripts": {
+      "total": 30,
+      "pending": 0,
+      "failed": 0
+    },
+    "prerequestScripts": {
+      "total": 30,
+      "pending": 0,
+      "failed": 0
+    }
+  },
+  "failures": [],
+  "executions": [
+    {
+      "name": "01 — Sessão anônima",
+      "httpStatus": 401,
+      "assertions": [
+        {
+          "name": "HTTP 401",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "02 — Token antes do login",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Token disponível",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "03 — Credenciais inválidas",
+      "httpStatus": 401,
+      "assertions": [
+        {
+          "name": "HTTP 401",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "03 — Credenciais inválidas",
+      "httpStatus": 401,
+      "assertions": [
+        {
+          "name": "HTTP 401",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "04 — Login válido",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "04 — Login válido",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "05 — Sessão autenticada",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Responsável da sessão",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "06 — Produtos",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Produto de demonstração disponível",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "07 — Lojas",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Loja A",
+          "passed": true
+        },
+        {
+          "name": "Loja B",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "08 — Saldo inicial origin",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Origem permite transferir 10",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "08 — Saldo inicial destination",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "09 — Cadastro normalizado",
+      "httpStatus": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Normalização",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "09 — Cadastro normalizado",
+      "httpStatus": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Normalização",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "10 — Consulta por ID",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "11 — Código duplicado",
+      "httpStatus": 409,
+      "assertions": [
+        {
+          "name": "HTTP 409",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "11 — Código duplicado",
+      "httpStatus": 409,
+      "assertions": [
+        {
+          "name": "HTTP 409",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "12 — Campos vazios",
+      "httpStatus": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "12 — Campos vazios",
+      "httpStatus": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "13 — Produto inexistente",
+      "httpStatus": 404,
+      "assertions": [
+        {
+          "name": "HTTP 404",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "14 — Estoque ausente é zero",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Saldo zero",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "15 — Quantidade zero",
+      "httpStatus": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "15 — Quantidade zero",
+      "httpStatus": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "16 — Quantidade fracionária",
+      "httpStatus": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "16 — Quantidade fracionária",
+      "httpStatus": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "17 — Lojas iguais",
+      "httpStatus": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "17 — Lojas iguais",
+      "httpStatus": 400,
+      "assertions": [
+        {
+          "name": "HTTP 400",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "18 — Produto inexistente",
+      "httpStatus": 404,
+      "assertions": [
+        {
+          "name": "HTTP 404",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "18 — Produto inexistente",
+      "httpStatus": 404,
+      "assertions": [
+        {
+          "name": "HTTP 404",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "19 — Saldo insuficiente",
+      "httpStatus": 409,
+      "assertions": [
+        {
+          "name": "HTTP 409",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "19 — Saldo insuficiente",
+      "httpStatus": 409,
+      "assertions": [
+        {
+          "name": "HTTP 409",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "20 — Sem CSRF",
+      "httpStatus": 403,
+      "assertions": [
+        {
+          "name": "HTTP 403",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "21 — Transferência válida",
+      "httpStatus": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Responsável e quantidade",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "21 — Transferência válida",
+      "httpStatus": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        },
+        {
+          "name": "Responsável e quantidade",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "22 — Conferir saldo origin",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Saldo após transferência",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "22 — Conferir saldo destination",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Saldo após transferência",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "23 — Histórico",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Transferência registrada",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "24 — Retornar as unidades à origem",
+      "httpStatus": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "24 — Retornar as unidades à origem",
+      "httpStatus": 201,
+      "assertions": [
+        {
+          "name": "HTTP 201",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "25 — Saldo restaurado origin",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Saldo original preservado",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "25 — Saldo restaurado destination",
+      "httpStatus": 200,
+      "assertions": [
+        {
+          "name": "HTTP 200",
+          "passed": true
+        },
+        {
+          "name": "Saldo original preservado",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "26 — Logout",
+      "httpStatus": 204,
+      "assertions": [
+        {
+          "name": "HTTP 204",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "26 — Logout",
+      "httpStatus": 204,
+      "assertions": [
+        {
+          "name": "HTTP 204",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "27 — Sessão encerrada",
+      "httpStatus": 401,
+      "assertions": [
+        {
+          "name": "HTTP 401",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}

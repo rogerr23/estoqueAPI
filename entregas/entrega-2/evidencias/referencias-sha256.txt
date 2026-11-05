@@ -1,0 +1,3 @@
+c2b4618b06efe5bb7dbbf50ec83fec7bdd11fc0beea97888251263d570f04c90  Estratégia e Plano de Testes.docx
+0dfe8afff0f68db63de0edd0d61d7099815902d47408902206a954c66bfb1cdc  Prova QA - A3.pdf
+8113742cf20e402eac692f70987b9910a55e63f159ca80424c8393e947d754a3  Roteiro-Entrega-2-EstoqueAPI.md

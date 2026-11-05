@@ -1,0 +1,15 @@
+Trechos reais da primeira tentativa restrita de 24/10/2026
+Caused by: java.net.SocketException: Operation not permitted
+java.lang.IllegalStateException: Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+[ERROR]   ProdutoServiceTests.naoDisfarcaOutrasFalhasDePersistenciaComoDuplicacao » IllegalState Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+[ERROR]   ProdutoServiceTests.traduzDuplicacaoMesmoQuandoPreConsultaNaoEncontraCodigo » IllegalState Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+[ERROR]   TransferenciaServiceTests.destinoAusenteComecaComZero » IllegalState Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+[ERROR]   TransferenciaServiceTests.rejeitaLojasIguais » IllegalState Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+[ERROR]   TransferenciaServiceTests.rejeitaQuantidadeInvalidaAntesDeAcessarBanco(int)[1] » IllegalState Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+[ERROR]   TransferenciaServiceTests.rejeitaQuantidadeInvalidaAntesDeAcessarBanco(int)[2] » IllegalState Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+[ERROR]   TransferenciaServiceTests.saldoInsuficienteNaoGravaDestinoNemHistorico » IllegalState Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+[ERROR]   TransferenciaServiceTests.transfereSaldoParcialOuExatoEGravaAposSaldos(int)[1] » IllegalState Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+[ERROR]   TransferenciaServiceTests.transfereSaldoParcialOuExatoEGravaAposSaldos(int)[2] » IllegalState Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+[ERROR] Tests run: 39, Failures: 0, Errors: 39, Skipped: 0
+[INFO] BUILD FAILURE
+[INFO] Finished at: 2026-10-24T17:28:14-03:00

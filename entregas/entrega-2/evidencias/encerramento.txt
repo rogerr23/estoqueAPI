@@ -1,0 +1,4 @@
+24/10/2026: apos a coleta, API 8081, Vite 5174/5175 e proxy 8082 foram encerrados.
+Contêiner estoqueapi-test-postgres-test-1 e rede estoqueapi-test_default removidos com compose.test.yaml down.
+Nenhum Compose ou volume de desenvolvimento foi iniciado, modificado ou removido.
+Docker ps ao final: sem contêineres em execução.

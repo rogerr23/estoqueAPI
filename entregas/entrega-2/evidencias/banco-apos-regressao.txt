@@ -1,0 +1,7 @@
+estoque_test|PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+produtos|2
+lojas|2
+usuarios|1
+estoques|3
+historicos|0
+triggers_ct|0

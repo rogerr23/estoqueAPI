@@ -1,0 +1,2 @@
+Docker Server: 27.4.0
+Container: /estoqueapi-test-postgres-test-1 Image: postgres:17 Health: healthy Tmpfs: {"/var/lib/postgresql/data":""} Ports: {"5432/tcp":[{"HostIp":"127.0.0.1","HostPort":"5434"}]}

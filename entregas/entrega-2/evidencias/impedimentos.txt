@@ -1,0 +1,5 @@
+IMP-01 | 24/10/2026 17:27–17:28 America/Sao_Paulo | Sandbox impediu Docker socket, conexao PostgreSQL e autoanexacao Mockito.
+Primeira tentativa Maven: 39 execucoes reportadas com erro de infraestrutura, zero assercoes de produto avaliadas com sucesso.
+Sintomas: java.net.SocketException: Operation not permitted; Mockito inline mock maker indisponivel.
+Tratamento: execucao autorizada fora do sandbox, mantendo exclusivamente compose.test.yaml e estoque_test:5434.
+Reteste: 39/39 aprovados as 17:28:26; regressao 39/39 as 17:33:24. Impedimento resolvido, nao contabilizado como defeito funcional.
