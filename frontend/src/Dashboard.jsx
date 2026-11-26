@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import { products, stores, stock, transfers, createProduct, createTransfer } from './services/api'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { products, stores, stock, transfers, productEdits, createProduct, createTransfer } from './services/api'
+import Funcionarios from './Funcionarios'
+import ProdutoEditor from './ProdutoEditor'
 
-const sections = ['Produtos', 'Estoque', 'Transferências', 'Histórico', 'API']
+const baseSections = ['Produtos', 'Estoque', 'Transferências', 'Histórico', 'Edições', 'API']
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' })
 
 function Table({ headers, children, empty }) {
@@ -9,8 +11,10 @@ function Table({ headers, children, empty }) {
 }
 
 export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, accountMessage }) {
+  const isAdmin = user.perfil === 'ADMIN'
+  const sections = isAdmin ? [...baseSections.slice(0, -1), 'Funcionários', 'API'] : baseSections
   const [section, setSection] = useState('Produtos')
-  const [data, setData] = useState({ products: [], stores: [], transfers: [] })
+  const [data, setData] = useState({ products: [], stores: [], transfers: [], edits: [] })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [revision, setRevision] = useState(0)
@@ -20,11 +24,12 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
   useEffect(() => { expired.current = onExpired }, [onExpired])
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [product, setProduct] = useState({ codigo: '', nome: '' })
+  const [product, setProduct] = useState({ codigo: '', nome: '', lojaId: '', quantidade: '' })
   const [storeId, setStoreId] = useState('')
   const [balances, setBalances] = useState(null)
   const [stockError, setStockError] = useState('')
   const [movement, setMovement] = useState({ produtoId: '', lojaOrigemId: '', lojaDestinoId: '', quantidade: '' })
+  const [editingProduct, setEditingProduct] = useState(null)
   const [preview, setPreview] = useState(null)
   const [previewError, setPreviewError] = useState('')
 
@@ -34,8 +39,8 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     setLoadError('')
-    Promise.all([products(controller.signal), stores(controller.signal), transfers(controller.signal)])
-      .then(([p, s, t]) => { setData({ products: p, stores: s, transfers: t }); setStoreId(id => id || String(s[0]?.id || '')) })
+    Promise.all([products(controller.signal), stores(controller.signal), transfers(controller.signal), productEdits(controller.signal)])
+      .then(([p, s, t, e]) => { setData({ products: p, stores: s, transfers: t, edits: e }); setStoreId(id => id || String(s[0]?.id || '')) })
       .catch(e => { if (e.name !== 'AbortError') { if (e.status === 401) expired.current(); else setLoadError(e.message) } })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
@@ -67,7 +72,8 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
     return () => controller.abort()
   }, [movement.lojaOrigemId, movement.lojaDestinoId, revision])
 
-  function navigate(name) { setSection(name); setError(''); setNotice('') }
+  function navigate(name) { setSection(name); setError(''); setNotice(''); setEditingProduct(null) }
+  const onExpiredStable = useCallback(() => expired.current(), [])
   function refresh() { setRevision(v => v + 1) }
   async function save(event, kind) {
     event.preventDefault()
@@ -81,9 +87,12 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
     setSaving(true)
     try {
       if (kind === 'product') {
-        const created = await createProduct(product)
-        setProduct({ codigo: '', nome: '' })
-        setNotice(`Produto ${created.codigo} cadastrado.`)
+        const quantidade = product.quantidade === '' ? 0 : Number(product.quantidade)
+        if (!Number.isSafeInteger(quantidade) || quantidade < 0) { setError('Informe uma quantidade inteira, zero ou maior.'); return }
+        const loja = data.stores.find(s => String(s.id) === product.lojaId)
+        const created = await createProduct({ codigo: product.codigo, nome: product.nome, lojaId: product.lojaId ? Number(product.lojaId) : null, quantidade })
+        setProduct(v => ({ codigo: '', nome: '', lojaId: v.lojaId, quantidade: '' }))
+        setNotice(loja ? `Produto ${created.codigo} cadastrado com ${quantidade} unidade(s) na ${loja.nome}.` : `Produto ${created.codigo} cadastrado.`)
       } else {
         const created = await createTransfer(Object.fromEntries(Object.entries(movement).map(([k, v]) => [k, Number(v)])))
         setMovement(v => ({ ...v, quantidade: '' }))
@@ -103,9 +112,9 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
   const storeOptions = data.stores.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)
 
   return <section className="dashboard" aria-label="Gestão de estoque">
-    <div className="session-bar"><span>{user.nome} <span className="muted">· {user.email}</span></span><button className="text-button" onClick={onLeave} disabled={busy || saving}>Sair</button></div>
+    <div className="session-bar"><span>{user.nome} <span className="muted">· {user.email}{isAdmin && ' · Administrador'}</span></span><button className="text-button" onClick={onLeave} disabled={busy || saving}>Sair</button></div>
     <nav className="navigation" aria-label="Módulos">{sections.map(name => <button key={name} aria-current={section === name ? 'page' : undefined} onClick={() => navigate(name)} disabled={saving}>{name}</button>)}</nav>
-    <div className="page-heading"><div><h2>{section === 'API' ? 'Acesso à API' : section}</h2><p className="muted">{({ Produtos: 'Cadastre e consulte o catálogo de produtos.', Estoque: 'Consulte a quantidade disponível em cada loja.', Transferências: 'Movimente produtos entre lojas.', Histórico: 'Operações concluídas, da mais recente para a mais antiga.', API: 'Explore os endpoints usando a sessão atual.' })[section]}</p></div>{section !== 'API' && <button className="secondary-button compact" onClick={refresh} disabled={saving || loading}>Atualizar</button>}</div>
+    <div className="page-heading"><div><h2>{section === 'API' ? 'Acesso à API' : section}</h2><p className="muted">{({ Produtos: 'Cadastre e consulte o catálogo de produtos.', Estoque: 'Consulte a quantidade disponível em cada loja.', Transferências: 'Movimente produtos entre lojas.', Histórico: 'Operações concluídas, da mais recente para a mais antiga.', Funcionários: 'Cadastre funcionários e acompanhe o que cada um fez.', Edições: 'Alterações de produtos feitas pelos administradores.', API: 'Explore os endpoints usando a sessão atual.' })[section]}</p></div>{section !== 'API' && <button className="secondary-button compact" onClick={refresh} disabled={saving || loading}>Atualizar</button>}</div>
     {accountMessage}
     {error && <p className="message error" role="alert">{error}</p>}
     {notice && <p className="message success" role="status">{notice}</p>}
@@ -115,9 +124,12 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
       <form className="erp-form product-form" onSubmit={e => save(e, 'product')} aria-busy={saving}>
         <div><label htmlFor="product-code">Código</label><input id="product-code" required maxLength={60} value={product.codigo} onChange={e => setProduct(v => ({ ...v, codigo: e.target.value }))} disabled={disabled} /></div>
         <div><label htmlFor="product-name">Nome do produto</label><input id="product-name" required maxLength={150} value={product.nome} onChange={e => setProduct(v => ({ ...v, nome: e.target.value }))} disabled={disabled} /></div>
+        <div><label htmlFor="product-store">Loja</label><select id="product-store" value={product.lojaId} onChange={e => setProduct(v => ({ ...v, lojaId: e.target.value }))} disabled={disabled}><option value="">Sem estoque inicial</option>{storeOptions}</select></div>
+        <div><label htmlFor="product-quantity">Quantidade</label><input id="product-quantity" type="number" min="0" max="2147483647" step="1" required={!!product.lojaId} disabled={disabled || !product.lojaId} value={product.quantidade} onChange={e => setProduct(v => ({ ...v, quantidade: e.target.value }))} /></div>
         <button className="primary-button compact" disabled={disabled}>{saving ? 'Cadastrando…' : 'Cadastrar produto'}</button>
       </form>
-      {!loading && !loadError && <Table headers={['Código', 'Nome', 'ID']} empty={!data.products.length}>{data.products.map(p => <tr key={p.id}><td className="code">{p.codigo}</td><td>{p.nome}</td><td>{p.id}</td></tr>)}</Table>}
+      {editingProduct && <ProdutoEditor key={editingProduct.id} product={editingProduct} stores={data.stores} onExpired={onExpiredStable} onCancel={() => setEditingProduct(null)} onSaved={saved => { setEditingProduct(null); setError(''); setNotice(`Produto ${saved.codigo} atualizado.`); refresh() }} />}
+      {!loading && !loadError && <Table headers={isAdmin ? ['Código', 'Nome', 'ID', 'Ações'] : ['Código', 'Nome', 'ID']} empty={!data.products.length}>{data.products.map(p => <tr key={p.id}><td className="code">{p.codigo}</td><td>{p.nome}</td><td>{p.id}</td>{isAdmin && <td><button className="text-button" onClick={() => { setEditingProduct(p); setNotice(''); setError('') }} disabled={saving}>Editar</button></td>}</tr>)}</Table>}
     </>}
     {section === 'Estoque' && <>
       <div className="filter"><label htmlFor="stock-store">Loja</label><select id="stock-store" value={storeId} onChange={e => setStoreId(e.target.value)} disabled={disabled}>{storeOptions}</select></div>
@@ -138,6 +150,8 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
       <p className="muted">O saldo é conferido ao confirmar. O responsável e o horário são registrados automaticamente.</p>
     </>}
     {section === 'Histórico' && !loading && !loadError && <Table headers={['Nº', 'Data e hora', 'Produto', 'Origem', 'Destino', 'Quantidade', 'Responsável']} empty={!data.transfers.length}>{data.transfers.map(t => <tr key={t.id}><td>{t.id}</td><td className="nowrap">{dateFormat.format(new Date(t.dataHora))}</td><td><span className="code">{t.produto.codigo}</span><br />{t.produto.nome}</td><td>{t.lojaOrigem.nome}</td><td>{t.lojaDestino.nome}</td><td className="quantity">{t.quantidade}</td><td>{t.usuario.nome}</td></tr>)}</Table>}
+    {section === 'Edições' && !loading && !loadError && <Table headers={['Data e hora', 'Produto', 'O que mudou', 'Responsável']} empty={!data.edits.length}>{data.edits.map(e => <tr key={e.id}><td className="nowrap">{dateFormat.format(new Date(e.dataHora))}</td><td><span className="code">{e.produto.codigo}</span><br />{e.produto.nome}</td><td>{e.alteracoes.split('; ').map((m, i) => <div key={i}>{m}</div>)}</td><td>{e.usuario.nome}</td></tr>)}</Table>}
+    {section === 'Funcionários' && isAdmin && <Funcionarios user={user} revision={revision} onExpired={() => expired.current()} />}
     {section === 'API' && apiTools}
   </section>
 }

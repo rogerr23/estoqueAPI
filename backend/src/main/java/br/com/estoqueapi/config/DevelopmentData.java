@@ -39,8 +39,10 @@ public class DevelopmentData implements CommandLineRunner {
         if (email.isBlank() || password.isBlank()) {
             throw new IllegalStateException("Configure DEMO_EMAIL e DEMO_PASSWORD para o perfil dev");
         }
+        // O usuário de demonstração é o administrador que cadastra os demais funcionários.
         usuarios.findByEmail(email).orElseGet(() ->
-            usuarios.save(new Usuario("Funcionário de demonstração", email, encoder.encode(password))));
+            usuarios.save(new Usuario("Funcionário de demonstração", email, encoder.encode(password), Perfil.ADMIN)))
+            .tornarAdmin();
         Loja origem = lojas.findFirstByNomeOrderByIdAsc("Loja A")
             .orElseGet(() -> lojas.save(new Loja("Loja A")));
         Loja destino = lojas.findFirstByNomeOrderByIdAsc("Loja B")

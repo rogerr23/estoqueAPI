@@ -14,7 +14,7 @@ public class FuncionarioDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) {
-        return usuarios.findByEmail(email.strip()).map(FuncionarioPrincipal::new)
+        return usuarios.findFirstByEmailIgnoreCase(email.strip()).map(FuncionarioPrincipal::new)
             .orElseThrow(() -> new UsernameNotFoundException("Credenciais inválidas"));
     }
 }

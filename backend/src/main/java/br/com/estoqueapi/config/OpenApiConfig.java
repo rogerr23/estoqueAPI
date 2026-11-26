@@ -17,7 +17,8 @@ public class OpenApiConfig {
             new SecurityScheme().type(SecurityScheme.Type.APIKEY).in(SecurityScheme.In.COOKIE).name("JSESSIONID"));
         components.addSchemas("UsuarioSessao", new ObjectSchema()
             .addProperty("id", new IntegerSchema().format("int64"))
-            .addProperty("nome", new StringSchema()).addProperty("email", new StringSchema()));
+            .addProperty("nome", new StringSchema()).addProperty("email", new StringSchema())
+            .addProperty("perfil", new StringSchema()._enum(java.util.List.of("ADMIN", "FUNCIONARIO"))));
         components.addSchemas("ErroApi", new ObjectSchema()
             .addProperty("codigo", new StringSchema()).addProperty("mensagem", new StringSchema())
             .addProperty("campos", new MapSchema().additionalProperties(true)));
@@ -56,6 +57,20 @@ public class OpenApiConfig {
             operation.getResponses().addApiResponse("500", erro("Falha interna sem detalhes sensíveis"));
             if (method == PathItem.HttpMethod.POST) {
                 operation.getResponses().addApiResponse("403", erro("Token CSRF ausente ou inválido"));
+            }
+            if (path.equals("/api/produtos/{id}") && method == PathItem.HttpMethod.PUT) {
+                operation.addParametersItem(new Parameter().name("X-CSRF-TOKEN").in("header").required(true).schema(new StringSchema()));
+                operation.getResponses().addApiResponse("403", erro("Restrito a administradores ou CSRF inválido"));
+                operation.getResponses().addApiResponse("409", erro("Código duplicado"));
+            }
+            if (path.startsWith("/api/usuarios")) {
+                operation.getResponses().addApiResponse("403", erro("Restrito a administradores ou CSRF inválido"));
+                if (method != PathItem.HttpMethod.GET) {
+                    operation.addParametersItem(new Parameter().name("X-CSRF-TOKEN").in("header").required(true).schema(new StringSchema()));
+                    operation.getResponses().addApiResponse("400", erro("Dados inválidos"));
+                    operation.getResponses().addApiResponse("409", erro("E-mail duplicado ou operação não permitida"));
+                }
+                if (path.contains("{id}")) operation.getResponses().addApiResponse("404", erro("Usuário inexistente"));
             }
             if (path.equals("/api/auth/login")) operation.getResponses().addApiResponse("401", erro("Credenciais inválidas"));
             if (path.startsWith("/api/produtos") || path.startsWith("/api/lojas") || path.startsWith("/api/transferencias")) {

@@ -69,3 +69,20 @@ async function post(path, data) {
 }
 export const createProduct = (data) => post('/api/produtos', data)
 export const createTransfer = (data) => post('/api/transferencias', data)
+
+async function send(method, path, data) {
+  const csrf = await csrfToken()
+  return request(path, {
+    method,
+    headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token },
+    body: data === undefined ? undefined : JSON.stringify(data),
+  })
+}
+// Administração de funcionários (somente perfil ADMIN).
+export const employees = (signal) => request('/api/usuarios', { signal })
+export const employeeActivity = (id, signal) => request(`/api/usuarios/${id}/atividades`, { signal })
+export const createEmployee = (data) => send('POST', '/api/usuarios', data)
+export const updateEmployee = (id, data) => send('PUT', `/api/usuarios/${id}`, data)
+export const deactivateEmployee = (id) => send('DELETE', `/api/usuarios/${id}`)
+export const updateProduct = (id, data) => send('PUT', `/api/produtos/${id}`, data)
+export const productEdits = (signal) => request('/api/produtos/edicoes', { signal })

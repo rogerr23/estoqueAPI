@@ -23,6 +23,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                .requestMatchers("/api/usuarios", "/api/usuarios/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/produtos/**").hasRole("ADMIN")
                 .anyRequest().authenticated())
             .formLogin(login -> login
                 .loginPage("/api/auth/login")

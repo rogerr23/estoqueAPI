@@ -145,7 +145,7 @@ ESTOQUE_API_PROXY_TARGET=http://127.0.0.1:8081 npm run dev -- --port 5174
 
 A variável altera o proxy do Vite para API e Swagger. Sem ela, permanece a
 configuração local na porta 8080. Evidências da Entrega 2, relatório e código
-de apoio ficam em `output/entrega-2/`, fora do Git. São execuções de 24/10/2026,
+de apoio ficam em `entregas/entrega-2/`, fora do Git. São execuções de 24/10/2026,
 separadas dos resultados históricos de 03/10 descritos abaixo.
 
 No frontend:
@@ -350,6 +350,33 @@ por saldo insuficiente e histórico com responsável e horário. Os registros de
 teste foram removidos sem alterar os produtos de demonstração.
 
 
+## Funcionários e administrador
+
+Cada pessoa entra com o próprio e-mail e senha, e as operações ficam registradas
+no nome dela. Há dois perfis:
+
+- **ADMIN**: tudo que o funcionário faz, mais a aba **Funcionários**, que lista
+  todos os usuários com o total de transferências, unidades movimentadas,
+  produtos cadastrados e a última atividade. **Ver atividades** mostra o que
+  cada um fez, da ação mais recente para a mais antiga.
+- **FUNCIONARIO**: produtos, estoque, transferências e histórico.
+
+O usuário de `DEMO_EMAIL` é criado (ou promovido) como administrador. Em bancos
+já existentes, a migração `V2` promove o primeiro usuário cadastrado.
+Excluir um funcionário o **desativa**: ele não consegue mais entrar, mas o
+histórico continua mostrando seu nome. O administrador não pode desativar a si
+mesmo nem retirar o próprio perfil de administrador.
+
+Endpoints (somente ADMIN; os de escrita exigem `X-CSRF-TOKEN`):
+
+| Método | Rota | Uso |
+| --- | --- | --- |
+| GET | `/api/usuarios` | Lista com o resumo de atividades |
+| POST | `/api/usuarios` | `{nome, email, senha, perfil}` |
+| PUT | `/api/usuarios/{id}` | `{nome, email, perfil, ativo, senha?}`; senha vazia mantém a atual |
+| DELETE | `/api/usuarios/{id}` | Desativa |
+| GET | `/api/usuarios/{id}/atividades` | Transferências e cadastros de produto |
+
 ## Validação final e coleção Postman
 
 Importe `postman/EstoqueAPI.postman_collection.json` e
@@ -398,7 +425,7 @@ A execução final usou API na porta 8081, PostgreSQL temporário na 5434 e uma 
 local da interface na 5174 com proxy para essa API. O ambiente habitual 5173/8080
 não foi modificado. Foram aprovadas 44 asserções Postman, em 30 cenários com
 43 chamadas HTTP contando as consultas auxiliares de CSRF. Resultados sanitizados:
-`docs/evidencias/fase-5/`; rastreabilidade: `docs/plano-de-testes.md`.
+`entregas/evidencias/fase-5/`; rastreabilidade: `docs/plano-de-testes.md`.
 
 ### Limitações conhecidas
 

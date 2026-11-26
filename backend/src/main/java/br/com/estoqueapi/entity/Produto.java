@@ -1,6 +1,7 @@
 package br.com.estoqueapi.entity;
 
 import jakarta.persistence.*;
+import java.time.Instant;
 
 @Entity
 @Table(name = "produtos")
@@ -15,6 +16,13 @@ public class Produto {
     @Column(nullable = false, length = 150)
     private String nome;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cadastrado_por_id")
+    private Usuario cadastradoPor;
+
+    @Column(name = "cadastrado_em")
+    private Instant cadastradoEm;
+
     protected Produto() {}
 
     public Produto(String codigo, String nome) {
@@ -22,7 +30,20 @@ public class Produto {
         this.nome = nome;
     }
 
+    public Produto(String codigo, String nome, Usuario cadastradoPor, Instant cadastradoEm) {
+        this(codigo, nome);
+        this.cadastradoPor = cadastradoPor;
+        this.cadastradoEm = cadastradoEm;
+    }
+
+    public void atualizar(String codigo, String nome) {
+        this.codigo = codigo;
+        this.nome = nome;
+    }
+
     public Long getId() { return id; }
     public String getCodigo() { return codigo; }
     public String getNome() { return nome; }
+    public Usuario getCadastradoPor() { return cadastradoPor; }
+    public Instant getCadastradoEm() { return cadastradoEm; }
 }

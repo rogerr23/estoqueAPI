@@ -12,6 +12,6 @@ public record TransferenciaResponse(Long id, ProdutoResponse produto, LojaRespon
         return new TransferenciaResponse(transferencia.getId(), ProdutoResponse.from(transferencia.getProduto()),
             new LojaResponse(origem.getId(), origem.getNome()), new LojaResponse(destino.getId(), destino.getNome()),
             transferencia.getQuantidade(), transferencia.getDataHora(),
-            new UsuarioResponse(usuario.getId(), usuario.getNome(), usuario.getEmail()));
+            UsuarioResponse.from(usuario));
     }
 }

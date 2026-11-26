@@ -38,6 +38,12 @@ public class Estoque {
         quantidade = Math.addExact(quantidade, unidades);
     }
 
+    /** Ajuste manual feito pelo administrador. */
+    public void definir(int novaQuantidade) {
+        if (novaQuantidade < 0) throw new IllegalArgumentException("Quantidade inválida");
+        quantidade = novaQuantidade;
+    }
+
     public Long getId() { return id; }
     public Loja getLoja() { return loja; }
     public Produto getProduto() { return produto; }
