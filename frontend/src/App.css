@@ -232,3 +232,26 @@ tbody tr.row-low { background: #fdf6f6; }
 @media (max-width: 700px) { .toolbar .filter { max-width: none; } }
 /* iOS aproxima a tela ao focar campos com fonte menor que 16px. */
 @media (max-width: 700px) { input:not([type=checkbox]), select, textarea { font-size: 16px; } }
+
+/* Sub-abas da Gestão. */
+.subtabs { display: flex; gap: 0; margin: 0 0 16px; border-bottom: 1px solid var(--border); }
+.subtabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 10px 16px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.subtabs button[aria-selected="true"] { color: var(--navy); border-bottom-color: var(--navy); }
+.subtabs button:hover { color: var(--text); }
+
+/* Acesso à API: painel aberto pelo botão "API" do cabeçalho. */
+.app-bar { position: relative; }
+.api-popover { position: absolute; top: 48px; right: 16px; z-index: 20; width: min(360px, calc(100vw - 32px)); background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(15, 23, 32, .22); }
+.api-popover .api-card { margin: 0; border: 0; max-width: none; }
+.api-popover .api-card h3 { margin-top: 0; }
+.popover-close { position: absolute; top: 6px; right: 8px; border: 0; background: transparent; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; padding: 4px 8px; }
+@media (max-width: 600px) {
+  .session .bar-button { padding: 6px 10px; }
+  .api-popover { right: 8px; left: 8px; width: auto; }
+  .subtabs button { flex: 1; min-height: 44px; }
+}
+/* Celular: filtros lado a lado (2 por linha) para a lista aparecer mais cedo. */
+@media (max-width: 700px) {
+  .toolbar .filter, .toolbar .export { flex: 1 1 calc(50% - 5px); }
+  .toolbar .export { align-self: flex-end; min-height: 44px; }
+}

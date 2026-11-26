@@ -7,7 +7,7 @@ import { employees, employeeActivity, createEmployee, updateEmployee, deactivate
 
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 const empty = { nome: '', email: '', senha: '', perfil: 'FUNCIONARIO', ativo: true }
-const activityLabel = { TRANSFERENCIA: 'Transferência', CADASTRO_PRODUTO: 'Cadastro de produto', EDICAO_PRODUTO: 'Edição de produto', ENTRADA: 'Entrada de mercadoria', EXCLUSAO_PRODUTO: 'Exclusão de produto', EXCLUSAO_TRANSFERENCIA: 'Exclusão de transferência' }
+const activityLabel = { TRANSFERENCIA: 'Transferência', CADASTRO_PRODUTO: 'Cadastro de produto', EDICAO_PRODUTO: 'Edição de produto', ENTRADA: 'Entrada de mercadoria', EXCLUSAO_PRODUTO: 'Exclusão de produto', EXCLUSAO_TRANSFERENCIA: 'Exclusão de transferência', EXCLUSAO_ENTRADA: 'Exclusão de entrada' }
 
 export default function Funcionarios({ user, revision, onExpired }) {
   const [list, setList] = useState([])

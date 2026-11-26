@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { products, stores, stock, transfers, productEdits, entries, createProduct, createTransfer, createEntry, deleteProduct, deleteTransfer } from './services/api'
+import { products, stores, stock, transfers, productEdits, entries, createProduct, createTransfer, createEntry, deleteProduct, deleteTransfer, deleteEntry } from './services/api'
 import Funcionarios from './Funcionarios'
 import ProdutoEditor from './ProdutoEditor'
 import Painel from './Painel'
@@ -9,26 +9,30 @@ import { Search, SortableTable, Pager, MobileCollapse } from './tableTools'
 import useMediaQuery from './useMediaQuery'
 import { matches, sortRows, paginate, downloadCsv, inPeriod } from './tableUtils'
 
-const baseSections = ['Painel', 'Produtos', 'Estoque', 'Entradas', 'Transferências', 'Histórico', 'Edições', 'API']
+// Ordem segue o fluxo de trabalho: visão geral, operação do dia, registros e cadastros. Gestão só para o admin.
+const baseSections = ['Painel', 'Estoque', 'Entradas', 'Transferências', 'Movimentações', 'Alterações', 'Produtos']
+const gestaoTabs = ['Lojas', 'Funcionários']
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' })
-const editLabels = { EDICAO: 'Edição', EXCLUSAO_PRODUTO: 'Exclusão de produto', EXCLUSAO_TRANSFERENCIA: 'Exclusão de transferência' }
+const editLabels = { EDICAO: 'Edição', EXCLUSAO_PRODUTO: 'Exclusão de produto', EXCLUSAO_TRANSFERENCIA: 'Exclusão de transferência', EXCLUSAO_ENTRADA: 'Exclusão de entrada' }
+const moveLabels = { entrada: 'Entrada', transferencia: 'Transferência' }
 const descriptions = {
-  Painel: 'Resumo do estoque e das últimas atividades.', Produtos: 'Cadastre e consulte o catálogo de produtos.',
-  Estoque: 'Consulte a quantidade disponível em cada loja.', Entradas: 'Registre mercadoria que chegou a uma loja.',
-  Transferências: 'Movimente produtos entre lojas.', Histórico: 'Operações concluídas, da mais recente para a mais antiga.',
-  Edições: 'Alterações e exclusões feitas pelos administradores.', Lojas: 'Cadastre novas lojas e ajuste os nomes.',
-  Funcionários: 'Cadastre funcionários e acompanhe o que cada um fez.', API: 'Explore os endpoints usando a sessão atual.',
+  Painel: 'Resumo do estoque e das últimas atividades.', Estoque: 'Consulte a quantidade disponível em cada loja.',
+  Entradas: 'Registre mercadoria que chegou a uma loja.', Transferências: 'Movimente produtos entre lojas.',
+  Movimentações: 'Entradas e transferências, da mais recente para a mais antiga.',
+  Alterações: 'Edições e exclusões feitas pelos administradores.', Produtos: 'Cadastre e consulte o catálogo de produtos.',
+  Gestão: 'Lojas e funcionários. Visível só para administradores.',
 }
 // Ordem inicial de cada aba (o usuário pode mudar clicando nas colunas).
 const defaultSort = {
   Produtos: { key: 'codigo', dir: 'asc' }, Estoque: { key: 'codigo', dir: 'asc' },
-  Entradas: { key: 'data', dir: 'desc' }, Histórico: { key: 'data', dir: 'desc' }, Edições: { key: 'data', dir: 'desc' },
+  Movimentações: { key: 'data', dir: 'desc' }, Alterações: { key: 'data', dir: 'desc' },
 }
 
 export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, accountMessage }) {
   const isAdmin = user.perfil === 'ADMIN'
   const isMobile = useMediaQuery('(max-width: 700px)')
-  const sections = isAdmin ? [...baseSections.slice(0, -1), 'Lojas', 'Funcionários', 'API'] : baseSections
+  const sections = isAdmin ? [...baseSections, 'Gestão'] : baseSections
+  const [apiOpen, setApiOpen] = useState(false)
   const [section, setSection] = useState('Painel')
   const [data, setData] = useState({ products: [], stores: [], transfers: [], edits: [], entries: [], stocks: {} })
   const [loading, setLoading] = useState(true)
@@ -146,15 +150,18 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
     } catch (e) { fail(e) } finally { lock.current = false; setSaving(false) }
   }
   async function remove(kind, item) {
-    const question = kind === 'product'
-      ? `Excluir o produto ${item.codigo}? Ele sai das listas e do estoque, mas continua no histórico.`
-      : `Excluir a transferência #${item.id}? As ${item.quantidade} unidade(s) voltam para ${item.lojaOrigem.nome}.`
+    const question = {
+      product: `Excluir o produto ${item.codigo}? Ele sai das listas e do estoque, mas continua nas movimentações.`,
+      transfer: `Excluir a transferência #${item.id}? As ${item.quantidade} unidade(s) voltam para ${item.lojaOrigem?.nome}.`,
+      entry: `Excluir a entrada #${item.id}? As ${item.quantidade} unidade(s) saem do estoque da ${item.loja?.nome}.`,
+    }[kind]
     if (lock.current || !window.confirm(question)) return
     lock.current = true
     setSaving(true); setError(''); setNotice('')
     try {
       if (kind === 'product') { await deleteProduct(item.id); setEditingProduct(null); setNotice(`Produto ${item.codigo} excluído.`) }
-      else { await deleteTransfer(item.id); setNotice(`Transferência #${item.id} excluída e estoque devolvido.`) }
+      else if (kind === 'transfer') { await deleteTransfer(item.id); setNotice(`Transferência #${item.id} excluída e estoque devolvido.`) }
+      else { await deleteEntry(item.id); setNotice(`Entrada #${item.id} excluída e unidades retiradas do estoque.`) }
       refresh()
     } catch (e) { fail(e) } finally { lock.current = false; setSaving(false) }
   }
@@ -179,43 +186,51 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
     .filter(p => matches(ui.Estoque?.query, p.codigo, p.nome))
     .map(p => ({ ...p, total: stockStore === 'all' ? totals[p.id] || 0 : balanceOf(stockStore, p.id) ?? 0 })), sortOf('Estoque'), stockGetters)
 
-  // Entradas
-  const entryRows = sortRows(data.entries.filter(e => matches(ui.Entradas?.query, e.produto.codigo, e.produto.nome, e.loja.nome, e.observacao, e.usuario.nome)
-    && (!ui.Entradas?.store || String(e.loja.id) === ui.Entradas.store)),
-  sortOf('Entradas'), { data: e => new Date(e.dataHora).getTime(), produto: e => e.produto.codigo, loja: e => e.loja.nome, quantidade: e => e.quantidade, responsavel: e => e.usuario.nome })
-  const entryPage = paginate(entryRows, ui.Entradas?.page)
-
-  // Histórico
-  const historyRows = sortRows(data.transfers.filter(t => matches(ui.Histórico?.query, t.id, t.produto.codigo, t.produto.nome, t.lojaOrigem.nome, t.lojaDestino.nome, t.usuario.nome)
-    && inPeriod(t.dataHora, ui.Histórico?.period)
-    && (!ui.Histórico?.store || String(t.lojaOrigem.id) === ui.Histórico.store || String(t.lojaDestino.id) === ui.Histórico.store)),
-  sortOf('Histórico'), { numero: t => t.id, data: t => new Date(t.dataHora).getTime(), produto: t => t.produto.codigo, quantidade: t => t.quantidade, responsavel: t => t.usuario.nome })
-  const historyPage = paginate(historyRows, ui.Histórico?.page)
-  function exportHistory() {
-    downloadCsv('historico-transferencias',
-      ['Nº', 'Data e hora', 'Código', 'Produto', 'Origem', 'Destino', 'Quantidade', 'Responsável'],
-      historyRows.map(t => [t.id, dateFormat.format(new Date(t.dataHora)), t.produto.codigo, t.produto.nome, t.lojaOrigem.nome, t.lojaDestino.nome, t.quantidade, t.usuario.nome]))
-    setNotice(`${historyRows.length} transferência(s) exportada(s) para CSV.`)
+  // Movimentações: entradas e transferências numa lista só.
+  const mv = ui.Movimentações || {}
+  const moves = [
+    ...data.transfers.map(t => ({ kind: 'transferencia', key: `t${t.id}`, item: t, id: t.id, dataHora: t.dataHora, produto: t.produto,
+      origem: t.lojaOrigem, destino: t.lojaDestino, quantidade: t.quantidade, usuario: t.usuario, observacao: '' })),
+    ...data.entries.map(e => ({ kind: 'entrada', key: `e${e.id}`, item: e, id: e.id, dataHora: e.dataHora, produto: e.produto,
+      origem: null, destino: e.loja, quantidade: e.quantidade, usuario: e.usuario, observacao: e.observacao || '' })),
+  ]
+  const moveRows = sortRows(moves.filter(m => matches(mv.query, m.id, m.produto.codigo, m.produto.nome, m.origem?.nome, m.destino.nome, m.usuario.nome, m.observacao)
+    && (!mv.type || m.kind === mv.type) && inPeriod(m.dataHora, mv.period)
+    && (!mv.store || String(m.origem?.id) === mv.store || String(m.destino.id) === mv.store)),
+  sortOf('Movimentações'), { data: m => new Date(m.dataHora).getTime(), tipo: m => moveLabels[m.kind], produto: m => m.produto.codigo, quantidade: m => m.quantidade, responsavel: m => m.usuario.nome })
+  const movePage = paginate(moveRows, mv.page)
+  function exportMoves() {
+    downloadCsv('movimentacoes',
+      ['Tipo', 'Nº', 'Data e hora', 'Código', 'Produto', 'Origem', 'Destino', 'Quantidade', 'Observação', 'Responsável'],
+      moveRows.map(m => [moveLabels[m.kind], m.id, dateFormat.format(new Date(m.dataHora)), m.produto.codigo, m.produto.nome, m.origem?.nome ?? '', m.destino.nome, m.quantidade, m.observacao, m.usuario.nome]))
+    setNotice(`${moveRows.length} movimentação(ões) exportada(s) para CSV.`)
   }
 
-  // Edições
-  const editRows = sortRows(data.edits.filter(e => matches(ui.Edições?.query, e.produto.codigo, e.produto.nome, e.alteracoes, e.usuario.nome)
-    && (!ui.Edições?.kind || e.acao === ui.Edições.kind)),
-  sortOf('Edições'), { data: e => new Date(e.dataHora).getTime(), acao: e => editLabels[e.acao], produto: e => e.produto.codigo, responsavel: e => e.usuario.nome })
-  const editPage = paginate(editRows, ui.Edições?.page)
+  // Alterações
+  const al = ui.Alterações || {}
+  const editRows = sortRows(data.edits.filter(e => matches(al.query, e.produto.codigo, e.produto.nome, e.alteracoes, e.usuario.nome)
+    && (!al.kind || e.acao === al.kind)),
+  sortOf('Alterações'), { data: e => new Date(e.dataHora).getTime(), acao: e => editLabels[e.acao], produto: e => e.produto.codigo, responsavel: e => e.usuario.nome })
+  const editPage = paginate(editRows, al.page)
 
   const recentTransfers = data.transfers.slice(0, 5)
+  const recentEntries = data.entries.slice(0, 5)
+  const gestaoTab = ui.Gestão?.sub || 'Lojas'
 
   return <section className="dashboard" aria-label="Gestão de estoque">
     <header className="app-bar">
       <div className="app-bar-row">
         <div className="brand"><span className="brand-mark" aria-hidden="true">E</span>EstoqueAPI<span className="brand-tagline">Controle de estoque entre lojas</span></div>
-        <div className="session"><span className="role-pill">{isAdmin ? 'ADMIN' : 'FUNCIONÁRIO'}</span><span className="session-name" title={user.email}>{user.nome}</span><button className="bar-button" onClick={onLeave} disabled={busy || saving}>Sair</button></div>
+        <div className="session"><span className="role-pill">{isAdmin ? 'ADMIN' : 'FUNCIONÁRIO'}</span><span className="session-name" title={user.email}>{user.nome}</span><button className="bar-button" aria-expanded={apiOpen} aria-controls="api-popover" onClick={() => setApiOpen(v => !v)}>API</button><button className="bar-button" onClick={onLeave} disabled={busy || saving}>Sair</button></div>
       </div>
       <nav className="navigation" aria-label="Módulos" ref={navRef}>{sections.map(name => <button key={name} aria-current={section === name ? 'page' : undefined} onClick={() => goTo(name)} disabled={saving}>{name}</button>)}</nav>
+      {apiOpen && <div id="api-popover" className="api-popover" role="dialog" aria-label="Acesso à API">
+        <button type="button" className="popover-close" aria-label="Fechar" onClick={() => setApiOpen(false)}>×</button>
+        {apiTools}
+      </div>}
     </header>
     <div className="content" ref={contentRef}>
-    <div className="page-heading"><div><h2>{section === 'API' ? 'Acesso à API' : section}</h2><p className="muted">{descriptions[section]}</p></div>{section !== 'API' && <button className="secondary-button compact" onClick={refresh} disabled={saving || loading}>Atualizar</button>}</div>
+    <div className="page-heading"><div><h2>{section}</h2><p className="muted">{descriptions[section]}</p></div><button className="secondary-button compact" onClick={refresh} disabled={saving || loading}>Atualizar</button></div>
     {accountMessage}
     {error && <p className="message error" role="alert">{error}</p>}
     {notice && <p className="message success" role="status">{notice}</p>}
@@ -272,16 +287,12 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
         <div><label htmlFor="entry-note">Observação (opcional)</label><input id="entry-note" maxLength={200} placeholder="Ex.: nota fiscal 123" value={entry.observacao} onChange={e => setEntry(v => ({ ...v, observacao: e.target.value }))} disabled={disabled} /></div>
         <button className="primary-button compact" disabled={disabled}>{saving ? 'Registrando…' : 'Registrar entrada'}</button>
       </form></MobileCollapse>
-      <div className="toolbar">
-        {searchBox('Buscar por produto, loja, observação ou responsável')}
-        <div className="filter"><label htmlFor="entry-filter-store">Loja</label><select id="entry-filter-store" value={tab.store || ''} onChange={e => patch({ store: e.target.value, page: 1 })}><option value="">Todas</option>{storeOptions}</select></div>
-      </div>
-      {ready && <SortableTable {...sortProps('Entradas')} empty={!entryRows.length} columns={[{ label: 'Data e hora', key: 'data' }, { label: 'Produto', key: 'produto' }, { label: 'Loja', key: 'loja' }, { label: 'Quantidade', key: 'quantidade' }, { label: 'Observação' }, { label: 'Responsável', key: 'responsavel' }]}>
-        {entryPage.pageRows.map(e => <tr key={e.id}><td className="nowrap">{dateFormat.format(new Date(e.dataHora))}</td><td><span className="code">{e.produto.codigo}</span><br />{e.produto.nome}</td><td>{e.loja.nome}</td><td className="quantity">+{e.quantidade}</td><td>{e.observacao || '—'}</td><td>{e.usuario.nome}</td></tr>)}
-      </SortableTable>}
-      {ready && <Pager {...entryPage} count={entryRows.length} noun="entradas" onPage={page => patch({ page })} />}
+      {ready && <div className="panel recent">
+        <h3 className="panel-head">Últimas entradas <button type="button" className="link-button" onClick={() => goTo('Movimentações', { type: 'entrada', page: 1 })}>Ver todas as entradas →</button></h3>
+        {!recentEntries.length ? <p className="empty">Nenhuma entrada ainda.</p> : <div className="table-scroll"><table><thead><tr><th scope="col">Nº</th><th scope="col">Quando</th><th scope="col">Produto</th><th scope="col">Loja</th><th scope="col">Quantidade</th><th scope="col">Responsável</th></tr></thead>
+          <tbody>{recentEntries.map(e => <tr key={e.id}><td>{e.id}</td><td className="nowrap">{dateFormat.format(new Date(e.dataHora))}</td><td><span className="code">{e.produto.codigo}</span> {e.produto.nome}</td><td>{e.loja.nome}</td><td className="quantity">+{e.quantidade}</td><td>{e.usuario.nome}</td></tr>)}</tbody></table></div>}
+      </div>}
     </>}
-
     {section === 'Transferências' && <>
       <form className="erp-form transfer-form" onSubmit={e => save(e, 'transfer')} aria-busy={saving}>
         <div className="wide"><label htmlFor="transfer-product">Produto</label><select id="transfer-product" required value={movement.produtoId} onChange={e => choose('produtoId', e.target.value)} disabled={disabled}><option value="">Selecione um produto</option>{productOptions}</select></div>
@@ -293,39 +304,50 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
       </form>
       <p className="muted">O saldo é conferido ao confirmar. O responsável e o horário são registrados automaticamente.</p>
       {ready && <div className="panel recent">
-        <h3 className="panel-head">Últimas transferências <button type="button" className="link-button" onClick={() => goTo('Histórico')}>Ver histórico completo →</button></h3>
+        <h3 className="panel-head">Últimas transferências <button type="button" className="link-button" onClick={() => goTo('Movimentações', { type: 'transferencia', page: 1 })}>Ver todas as transferências →</button></h3>
         {!recentTransfers.length ? <p className="empty">Nenhuma transferência ainda.</p> : <div className="table-scroll"><table><thead><tr><th scope="col">Nº</th><th scope="col">Quando</th><th scope="col">Produto</th><th scope="col">Movimento</th><th scope="col">Responsável</th></tr></thead>
           <tbody>{recentTransfers.map(t => <tr key={t.id}><td>{t.id}</td><td className="nowrap">{dateFormat.format(new Date(t.dataHora))}</td><td><span className="code">{t.produto.codigo}</span> {t.produto.nome}</td><td>{t.quantidade} un. · {t.lojaOrigem.nome} → {t.lojaDestino.nome}</td><td>{t.usuario.nome}</td></tr>)}</tbody></table></div>}
       </div>}
     </>}
 
-    {section === 'Histórico' && <>
+    {section === 'Movimentações' && <>
       <div className="toolbar">
-        {searchBox('Buscar por produto, loja ou responsável')}
-        <div className="filter"><label htmlFor="history-period">Período</label><select id="history-period" value={tab.period || ''} onChange={e => patch({ period: e.target.value, page: 1 })}><option value="">Tudo</option><option value="hoje">Hoje</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select></div>
-        <div className="filter"><label htmlFor="history-store">Loja (origem ou destino)</label><select id="history-store" value={tab.store || ''} onChange={e => patch({ store: e.target.value, page: 1 })}><option value="">Todas</option>{storeOptions}</select></div>
-        <button className="secondary-button compact export" onClick={exportHistory} disabled={!ready || !historyRows.length}>Exportar CSV</button>
+        {searchBox('Buscar por produto, loja, observação ou responsável')}
+        <div className="filter"><label htmlFor="move-type">Tipo</label><select id="move-type" value={mv.type || ''} onChange={e => patch({ type: e.target.value, page: 1 })}><option value="">Todas</option><option value="entrada">Entradas</option><option value="transferencia">Transferências</option></select></div>
+        <div className="filter"><label htmlFor="move-period">Período</label><select id="move-period" value={mv.period || ''} onChange={e => patch({ period: e.target.value, page: 1 })}><option value="">Tudo</option><option value="hoje">Hoje</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select></div>
+        <div className="filter"><label htmlFor="move-store">Loja</label><select id="move-store" value={mv.store || ''} onChange={e => patch({ store: e.target.value, page: 1 })}><option value="">Todas</option>{storeOptions}</select></div>
+        <button className="secondary-button compact export" onClick={exportMoves} disabled={!ready || !moveRows.length}>Exportar CSV</button>
       </div>
-      {ready && <SortableTable {...sortProps('Histórico')} empty={!historyRows.length} columns={[{ label: 'Nº', key: 'numero' }, { label: 'Data e hora', key: 'data' }, { label: 'Produto', key: 'produto' }, { label: 'Origem' }, { label: 'Destino' }, { label: 'Quantidade', key: 'quantidade' }, { label: 'Responsável', key: 'responsavel' }, ...(isAdmin ? [{ label: 'Ações' }] : [])]}>
-        {historyPage.pageRows.map(t => <tr key={t.id}><td>{t.id}</td><td className="nowrap">{dateFormat.format(new Date(t.dataHora))}</td><td><span className="code">{t.produto.codigo}</span><br />{t.produto.nome}</td><td>{t.lojaOrigem.nome}</td><td>{t.lojaDestino.nome}</td><td className="quantity">{t.quantidade}</td><td>{t.usuario.nome}</td>{isAdmin && <td><div className="row-actions"><button className="row-button danger" onClick={() => remove('transfer', t)} disabled={saving}>Excluir</button></div></td>}</tr>)}
+      {ready && <SortableTable {...sortProps('Movimentações')} empty={!moveRows.length} columns={[{ label: 'Data e hora', key: 'data' }, { label: 'Tipo', key: 'tipo' }, { label: 'Produto', key: 'produto' }, { label: 'Lojas' }, { label: 'Quantidade', key: 'quantidade' }, { label: 'Responsável', key: 'responsavel' }, ...(isAdmin ? [{ label: 'Ações' }] : [])]}>
+        {movePage.pageRows.map(m => <tr key={m.key}>
+          <td className="nowrap">{dateFormat.format(new Date(m.dataHora))}<br /><span className="muted">nº {m.id}</span></td>
+          <td><span className={`kind ${m.kind === 'entrada' ? 'kind-in' : 'kind-move'}`}>{moveLabels[m.kind]}</span></td>
+          <td><span className="code">{m.produto.codigo}</span><br />{m.produto.nome}</td>
+          <td>{m.origem ? `${m.origem.nome} → ${m.destino.nome}` : `→ ${m.destino.nome}`}{m.observacao && <><br /><span className="muted">{m.observacao}</span></>}</td>
+          <td className="quantity">{m.kind === 'entrada' ? `+${m.quantidade}` : m.quantidade}</td>
+          <td>{m.usuario.nome}</td>
+          {isAdmin && <td><div className="row-actions"><button className="row-button danger" onClick={() => remove(m.kind === 'entrada' ? 'entry' : 'transfer', m.item)} disabled={saving}>Excluir</button></div></td>}
+        </tr>)}
       </SortableTable>}
-      {ready && <Pager {...historyPage} count={historyRows.length} noun="transferências" onPage={page => patch({ page })} />}
+      {ready && <Pager {...movePage} count={moveRows.length} noun="movimentações" onPage={page => patch({ page })} />}
     </>}
 
-    {section === 'Edições' && <>
+    {section === 'Alterações' && <>
       <div className="toolbar">
         {searchBox('Buscar por produto, alteração ou responsável')}
-        <div className="filter"><label htmlFor="edit-kind">Tipo</label><select id="edit-kind" value={tab.kind || ''} onChange={e => patch({ kind: e.target.value, page: 1 })}><option value="">Todos</option>{Object.entries(editLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <div className="filter"><label htmlFor="edit-kind">Tipo</label><select id="edit-kind" value={al.kind || ''} onChange={e => patch({ kind: e.target.value, page: 1 })}><option value="">Todos</option>{Object.entries(editLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
       </div>
-      {ready && <SortableTable {...sortProps('Edições')} empty={!editRows.length} columns={[{ label: 'Data e hora', key: 'data' }, { label: 'Ação', key: 'acao' }, { label: 'Produto', key: 'produto' }, { label: 'O que mudou' }, { label: 'Responsável', key: 'responsavel' }]}>
+      {ready && <SortableTable {...sortProps('Alterações')} empty={!editRows.length} columns={[{ label: 'Data e hora', key: 'data' }, { label: 'Ação', key: 'acao' }, { label: 'Produto', key: 'produto' }, { label: 'O que mudou' }, { label: 'Responsável', key: 'responsavel' }]}>
         {editPage.pageRows.map(e => <tr key={e.id}><td className="nowrap">{dateFormat.format(new Date(e.dataHora))}</td><td><span className={`kind ${e.acao === 'EDICAO' ? 'kind-edit' : 'kind-out'}`}>{editLabels[e.acao] || e.acao}</span></td><td><span className="code">{e.produto.codigo}</span><br />{e.produto.nome}</td><td>{e.alteracoes.split('; ').map((m, i) => <div key={i}>{m}</div>)}</td><td>{e.usuario.nome}</td></tr>)}
       </SortableTable>}
       {ready && <Pager {...editPage} count={editRows.length} noun="registros" onPage={page => patch({ page })} />}
     </>}
 
-    {section === 'Lojas' && isAdmin && ready && <Lojas stores={data.stores} stocks={data.stocks} disabled={disabled} onError={e => { setNotice(''); fail(e) }} onDone={message => { setError(''); setNotice(message); refresh() }} />}
-    {section === 'Funcionários' && isAdmin && <Funcionarios user={user} revision={revision} onExpired={() => expired.current()} />}
-    {section === 'API' && apiTools}
+    {section === 'Gestão' && isAdmin && <>
+      <div className="subtabs" role="tablist" aria-label="Gestão">{gestaoTabs.map(name => <button key={name} role="tab" aria-selected={gestaoTab === name} onClick={() => patch({ sub: name })}>{name}</button>)}</div>
+      {gestaoTab === 'Lojas' && ready && <Lojas stores={data.stores} stocks={data.stocks} disabled={disabled} onError={e => { setNotice(''); fail(e) }} onDone={message => { setError(''); setNotice(message); refresh() }} />}
+      {gestaoTab === 'Funcionários' && <Funcionarios user={user} revision={revision} onExpired={() => expired.current()} />}
+    </>}
     </div>
   </section>
 }

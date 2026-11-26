@@ -1,69 +1,111 @@
 # EstoqueAPI
 
-Sistema acadêmico para consultar estoque por loja e transferir produtos entre lojas.
+Sistema acadêmico, desenvolvido para a disciplina de Qualidade de Software, para
+controlar o estoque de várias lojas: cadastro de produtos, entrada de mercadoria,
+transferências entre lojas, histórico de movimentações e registro de quem fez cada
+operação. Funciona no computador e no celular.
 
-Para publicar a interface e a API no Render, siga [o guia de publicação](RENDER.md).
-O `render.yaml` da raiz configura uma demonstração com Web Service e PostgreSQL.
+Para publicar no Render, siga [o guia de publicação](RENDER.md). O `render.yaml` da
+raiz cria um Web Service (interface + API) e um PostgreSQL.
 
-## Estado atual
+## Sumário
 
-Fases 1 a 5 concluídas para o escopo do MVP: base executável, autenticação com
-sessão e CSRF, produtos, estoque, transferências, histórico e interface React.
-Validação final: 39 testes JUnit/MockMvc/integração, 30 cenários da coleção
-Postman (44 asserções), lint, build e fluxo completo pela interface aprovados.
-Plano, resultados sanitizados e oito capturas estão em `docs/`, mantidos localmente
-fora dos commits conforme a organização deste projeto. A coleção executável e
-seu exemplo de ambiente estão em `postman/`, sem credenciais.
+- [Funcionalidades](#funcionalidades)
+- [Perfis de acesso](#perfis-de-acesso)
+- [Tecnologias e requisitos](#tecnologias-e-requisitos)
+- [Como executar](#como-executar)
+- [Dados de demonstração](#dados-de-demonstração)
+- [Testes e qualidade](#testes-e-qualidade)
+- [API](#api)
+- [Regras de negócio](#regras-de-negócio)
+- [Banco de dados e migrações](#banco-de-dados-e-migrações)
+- [Organização do código](#organização-do-código)
+- [Limitações conhecidas](#limitações-conhecidas)
 
-## Requisitos
+## Funcionalidades
 
-- Java 21.
-- Node.js 22.14 ou superior compatível com Vite e npm.
-- Docker com Docker Compose e daemon iniciado.
-- Git para versionamento.
+As abas seguem o fluxo de trabalho: visão geral, operação do dia, registros e cadastros.
 
-O Maven Wrapper está incluído; não é necessário instalar Maven.
-Backend: Spring Boot 3.5.16, JPA, Spring Security, Flyway e PostgreSQL.
-Frontend: React e Vite; versões resolvidas em `frontend/package-lock.json`.
+| Aba | O que faz |
+| --- | --- |
+| **Painel** | Números principais (produtos, unidades por loja, entradas e transferências do dia), alerta de **estoque baixo** e últimas atividades. Cada cartão leva à aba correspondente já filtrada. |
+| **Estoque** | Saldos de **todas as lojas** lado a lado (uma coluna por loja e o total) ou de uma loja só. |
+| **Entradas** | Registra mercadoria que chegou a uma loja (produto, loja, quantidade e observação, como a nota fiscal). Mostra as últimas 5 entradas. |
+| **Transferências** | Move unidades entre lojas. Mostra o saldo atual da origem e do destino e o máximo permitido, e impede o envio se a origem não tiver saldo. Mostra as últimas 5 transferências. |
+| **Movimentações** | Histórico único de **entradas e transferências**, com filtros por tipo, período (hoje, 7 ou 30 dias) e loja, mais busca, ordenação, paginação e **exportação para CSV**. |
+| **Alterações** | Registro de edições e exclusões feitas por administradores: quem fez, quando e o que mudou ("antes → depois"). Visível a todos. |
+| **Produtos** | Catálogo com estoque total, **estoque mínimo** e situação (OK/Baixo). Cadastro com estoque inicial opcional numa loja. |
+| **Gestão** | Somente admin. Sub-abas **Lojas** (cadastrar e renomear) e **Funcionários** (cadastrar, editar, desativar/reativar e ver as atividades de cada um). |
 
-## Configuração local
+**Recursos comuns a todas as listas:** busca sem diferenciar maiúsculas e acentos;
+ordenação clicando no título da coluna; filtros, busca e página guardados por aba;
+mensagens de sucesso que somem em 4 s e de erro em 8 s.
 
-Na raiz, copie o exemplo e defina senhas locais:
+**Acesso à API:** o botão **API** no cabeçalho abre o Swagger e copia o token CSRF.
+
+**Celular:** as tabelas viram cartões com o nome de cada campo; um seletor
+"Ordenar por" substitui o clique nas colunas; os formulários de cadastro começam
+recolhidos para a lista aparecer primeiro; campos com fonte de 16 px (sem zoom
+automático no iPhone) e botões de 44 px; filtros dois por linha; paginação compacta.
+
+## Perfis de acesso
+
+| Ação | Funcionário | Admin |
+| --- | :---: | :---: |
+| Consultar painel, estoque, movimentações e alterações | ✓ | ✓ |
+| Registrar entradas e transferências | ✓ | ✓ |
+| Cadastrar produtos | ✓ | ✓ |
+| Editar produto (código, nome, mínimo e saldo por loja) | | ✓ |
+| Excluir produto, entrada ou transferência | | ✓ |
+| Gestão de lojas e funcionários | | ✓ |
+
+- Cada pessoa entra com o próprio e-mail e senha; toda operação registra o responsável.
+- Excluir um funcionário o **desativa**: ele não entra mais, mas o histórico mantém o nome.
+- Ao **desativar** alguém ou **mudar o perfil**, a sessão aberta dessa pessoa é encerrada
+  na hora (o sistema confere o banco a cada requisição).
+- O admin não pode desativar a si mesmo nem retirar o próprio perfil de administrador.
+- O usuário de `DEMO_EMAIL` é criado (ou promovido) como admin ao iniciar com o perfil
+  `dev`. Em bancos antigos, a migração V2 promove o primeiro usuário cadastrado.
+
+## Tecnologias e requisitos
+
+- **Backend:** Java 21, Spring Boot 3.5, Spring Security (sessão + CSRF), JPA, Flyway e PostgreSQL 17.
+- **Frontend:** React e Vite (versões em `frontend/package-lock.json`).
+- **Para desenvolver:** Java 21, Node.js 22.14+, Docker com Compose e Git. O Maven
+  Wrapper está incluído; não é preciso instalar Maven.
+- **Só para usar:** apenas Docker (veja [Rodar tudo com Docker](#rodar-tudo-com-docker)).
+
+## Como executar
+
+### Configuração
+
+Na raiz, copie o exemplo e defina senhas locais (o `.env` fica fora do Git e não
+deve ser sobrescrito se já existir):
 
 ```sh
 cp .env.example .env
 ```
 
-Não sobrescreva um `.env` já configurado. O arquivo `.env` fica fora do Git.
-Nesta primeira configuração já foi criado um `.env` local com senhas aleatórias.
-O backend carrega esse arquivo ao executar a partir da raiz ou de `backend/`.
-As variáveis do ambiente têm precedência.
+O backend lê esse arquivo ao rodar a partir da raiz ou de `backend/`; variáveis de
+ambiente têm precedência.
 
-## Trabalhar no IntelliJ IDEA
+### Desenvolvimento (IntelliJ IDEA ou terminal)
 
-1. Abra a pasta `estoqueAPI`.
-2. Abra `backend/pom.xml` e use **Add as Maven Project** se ainda não estiver vinculado.
-3. Selecione JDK 21 para o projeto e para o importador/runner do Maven.
-4. Inicie o banco pelo terminal integrado, na raiz:
+1. Abra a pasta `estoqueAPI`; em `backend/pom.xml`, use **Add as Maven Project** e selecione o JDK 21.
+2. Inicie o banco, na raiz:
 
 ```sh
 docker compose up -d --wait
 ```
 
-5. Pelo terminal integrado, inicie o backend:
+3. Inicie o backend (porta 8080). A configuração **EstoqueAPI dev** em `.run/` faz o mesmo pela IDE:
 
 ```sh
 cd backend
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-A configuração compartilhada **EstoqueAPI dev** em `.run/` já define o perfil e
-o diretório de execução. Selecione-a na IDE para executar ou depurar.
-Também pode executar `EstoqueApiApplication` pela IDE, usando `backend/` como
-working directory e `--spring.profiles.active=dev` como argumento do programa.
-O servidor escuta em `http://127.0.0.1:8080`.
-
-6. Em outro terminal integrado, a partir da raiz:
+4. Em outro terminal, inicie o frontend:
 
 ```sh
 cd frontend
@@ -71,44 +113,59 @@ npm ci
 npm run dev
 ```
 
-Acesse `http://127.0.0.1:5173`. O Vite encaminha `/api` ao backend.
+Acesse `http://127.0.0.1:5173` e entre com `DEMO_EMAIL` e `DEMO_PASSWORD` do `.env`.
+O Vite encaminha `/api`, `/swagger-ui` e `/v3/api-docs` ao backend.
+
+### Rodar tudo com Docker
+
+Sem Java, Node ou IDE: com o Docker Desktop aberto e o `.env` configurado (senhas
+diferentes em `POSTGRES_PASSWORD` e `DEMO_PASSWORD`), na raiz:
+
+```sh
+docker compose -f compose.app.yaml up -d --build --wait
+```
+
+Acesse `http://127.0.0.1:8090`. Para parar mantendo os dados:
+
+```sh
+docker compose -f compose.app.yaml down
+```
+
+Não use `down -v` para parar: ele apaga o volume de dados. Para outra porta, defina
+`APP_PORT` no `.env`. Este modo usa volume próprio, separado do desenvolvimento.
+
+### Publicação no Render
+
+O `Dockerfile` da raiz compila o React e o inclui no JAR, servindo interface, API e
+Swagger no mesmo endereço. O deploy aplica as migrações automaticamente. Detalhes,
+limites do plano gratuito e conferência em [RENDER.md](RENDER.md).
 
 ## Dados de demonstração
 
-O perfil `dev` cria os dados em uma transação, somente quando ausentes.
-Reiniciar o backend não reinicia saldos nem duplica registros.
+O perfil `dev` cria os dados numa transação, somente quando ausentes (reiniciar não
+duplica nem restaura saldos):
 
 | Produto | Loja A | Loja B |
 | --- | ---: | ---: |
 | PROD-001 — Caderno | 20 | 5 |
-| PROD-002 — Caneta | 12 | Sem registro (consulta retorna saldo zero) |
+| PROD-002 — Caneta | 12 | sem registro (saldo zero) |
 
-O funcionário usa `DEMO_EMAIL` e `DEMO_PASSWORD` do `.env`. A senha é gravada com
-BCrypt. Alterar a variável não altera a senha de um usuário já criado.
-A carga não roda fora do perfil `dev`.
-
-### Restaurar os dados de demonstração
-
-A sequência abaixo **apaga todo o banco local deste projeto**, incluindo futuros
-produtos e transferências. Use somente quando quiser recomeçar a demonstração.
-Pare o backend primeiro:
+A senha do admin é gravada com BCrypt; alterar `DEMO_PASSWORD` depois não muda a
+senha de um usuário já criado. Para recomeçar do zero, **apagando todo o banco local**,
+pare o backend e rode:
 
 ```sh
 docker compose down -v
 docker compose up -d --wait
-cd backend
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-O Flyway recria as tabelas e a carga restaura os dados iniciais.
+## Testes e qualidade
 
-## Testes e verificações
+### Testes automatizados do backend
 
-Os testes usam PostgreSQL exclusivo, na porta 5434, com armazenamento temporário.
-Crie `.env.test` na raiz com `TEST_DATABASE_PASSWORD=uma-senha-local-de-teste`.
-Esse arquivo também fica fora do Git. Nesta primeira configuração ele já foi criado.
-
-Na raiz, em um terminal zsh/bash:
+Os testes usam um PostgreSQL exclusivo na porta 5434, com armazenamento temporário.
+Crie `.env.test` na raiz com `TEST_DATABASE_PASSWORD=uma-senha-local-de-teste`
+(fora do Git). Na raiz:
 
 ```sh
 set -a
@@ -119,36 +176,40 @@ cd backend
 ./mvnw verify
 ```
 
-Para repetir a suíte desde um banco limpo, pare o banco de testes antes de iniciá-lo
-novamente. Os testes pressupõem a base exclusiva com apenas os dados de teste:
+Para repetir desde um banco limpo, remova o contêiner de testes (o banco de
+desenvolvimento não é afetado):
 
 ```sh
-# Execute na raiz do projeto.
 docker compose -p estoqueapi-test -f compose.test.yaml down
 ```
 
-Esse comando remove o contêiner de testes e seus dados temporários. O volume de
-desenvolvimento permanece intacto. Os relatórios ficam em
-`backend/target/surefire-reports/`.
+Relatórios em `backend/target/surefire-reports/`. A suíte só conecta ao banco
+`estoque_test`, na porta 5434 de `localhost`; outras URLs são rejeitadas. A senha do
+usuário de teste é gerada em memória a cada execução.
 
-A suíte de integração restringe a conexão ao banco `estoque_test`, usuário
-`estoque_test`, na porta 5434 de `localhost` ou `127.0.0.1`. URLs diferentes em
-`TEST_DATABASE_URL` são rejeitadas antes da conexão. A senha do funcionário de
-teste é gerada em memória a cada processo de testes; ela não é a senha do `.env`.
+**Resultado atual (26/11/2026): 62 testes, 0 falhas, 0 erros, 0 ignorados.**
 
-Para testar a interface contra a API separada na porta 8081:
+| Classe | Testes | O que cobre |
+| --- | ---: | --- |
+| `AcessoConsultasTests` | 12 | Login, sessão, CSRF, logout, consultas, validações e 401 sem sessão |
+| `TransferenciaIntegrationTests` | 12 | Transferências, saldo exato/insuficiente, limite, **rollback**, **concorrência** e contrato OpenAPI |
+| `TransferenciaServiceTests` | 7 | Regras de transferência (unitários com Mockito) |
+| `EstoqueApiApplicationTests` | 6 | Dados de demonstração (senha protegida, sem duplicar) e restrições do banco |
+| `UsuarioAdminTests` | 5 | CRUD de funcionários, permissões, e-mail duplicado e **sessão encerrada ao desativar/mudar perfil** |
+| `ProdutoAtualizacaoTests` | 5 | Edição pelo admin, estoque mínimo, registro de alterações e 403 para funcionário |
+| `ExclusaoAdminTests` | 4 | Exclusão de produto e transferência, devolução de estoque e 403 |
+| `EntradaTests` | 3 | Entradas, soma no estoque, atividades e exclusão pelo admin |
+| `LojaAdminTests` | 2 | Cadastro e renomeação de lojas, nome duplicado e 403 |
+| `ProdutoEstoqueInicialTests` | 2 | Cadastro com estoque inicial e validações |
+| `ProdutoServiceTests` | 2 | Código duplicado (unitários) |
+| `SecurityConfigTests` | 2 | Rotas públicas e protegidas |
 
-```sh
-cd frontend
-ESTOQUE_API_PROXY_TARGET=http://127.0.0.1:8081 npm run dev -- --port 5174
-```
+- **Rollback:** um trigger temporário, criado só no banco de testes, força uma falha
+  depois do débito; a suíte confirma que saldos e histórico voltam ao estado anterior.
+- **Concorrência:** transações em threads separadas disputam o mesmo saldo, criam um
+  destino em comum e movimentam em sentidos opostos; os saldos finais e o total são conferidos.
 
-A variável altera o proxy do Vite para API e Swagger. Sem ela, permanece a
-configuração local na porta 8080. Evidências da Entrega 2, relatório e código
-de apoio ficam em `entregas/entrega-2/`, fora do Git. São execuções de 24/10/2026,
-separadas dos resultados históricos de 03/10 descritos abaixo.
-
-No frontend:
+### Frontend
 
 ```sh
 cd frontend
@@ -156,321 +217,158 @@ npm run lint
 npm run build
 ```
 
-Validação em 03/10/2026: `./mvnw verify` passou com **39 testes**, sem falhas,
-erros ou testes ignorados: 6 da base, 24 de API/integração e 9 unitários.
-Inclui os testes anteriores e transferência válida, quantidade 1, saldo exato,
-saldo insuficiente, destino ausente, entradas inválidas, usuário da sessão,
-histórico ordenado, limite do inteiro, rollback e concorrência com PostgreSQL.
+Ambos passam sem avisos.
 
-O teste de rollback instala um trigger temporário **somente no banco de testes**:
-ele confirma que o débito já chegou ao banco e provoca falha na gravação do
-histórico. A suíte verifica a restauração dos saldos, a ausência de histórico
-e a remoção do estoque de destino recém-criado. O trigger é removido ao final.
+### Verificação manual (QA)
 
-Os testes concorrentes iniciam transações em threads separadas para disputar o
-mesmo saldo, criar um destino em comum e movimentar em sentidos opostos. Asserções
-verificam os saldos finais, o total preservado e o número de registros criados.
-
-
-## Organização
-
-- `backend/`: aplicação Java, entidades, repositories, configuração e testes.
-- `backend/src/main/resources/db/migration/`: esquema versionado com Flyway.
-- `frontend/`: aplicação React e proxy de desenvolvimento.
-- `docs/`: plano de testes e evidências.
-- `postman/`: coleção executável com cenários positivos/negativos e exemplo de ambiente.
-
-## Marcos concluídos
-
-As cinco fases do plano foram concluídas. Funcionalidades adicionais ou critérios
-específicos da disciplina devem ser alinhados antes de ampliar o escopo.
-
-## API — Fases 2 e 3
-
-Todos os endpoints de negócio e a documentação exigem sessão. Somente a obtenção
-de CSRF e o processamento do login são públicos. As respostas são JSON, sem
-redirecionamento para uma página de login.
-
-| Método | Endpoint | Resultado |
-| --- | --- | --- |
-| GET | `/api/auth/csrf` | 200 — token, headerName, parameterName |
-| POST | `/api/auth/login` | 200 — id, nome e email; inicia sessão |
-| POST | `/api/auth/logout` | 204 — encerra sessão |
-| GET | `/api/auth/me` | 200 — funcionário da sessão, sem senha/hash |
-| POST | `/api/produtos` | 201 — produto criado; cabeçalho Location |
-| GET | `/api/produtos` | 200 — produtos em ordem de ID |
-| GET | `/api/produtos/{id}` | 200 — produto |
-| GET | `/api/lojas` | 200 — lojas em ordem de ID |
-| GET | `/api/lojas/{id}/estoque` | 200 — todos os produtos e saldos, incluindo zero |
-| POST | `/api/transferencias` | 201 — transferência concluída |
-| GET | `/api/transferencias` | 200 — histórico do mais recente para o mais antigo |
-
-### Como testar com Postman
-
-1. Envie GET `http://127.0.0.1:8080/api/auth/csrf`. Preserve o cookie de sessão
-   no cookie jar e copie `token` da resposta.
-2. Envie POST `/api/auth/login` com header `X-CSRF-TOKEN` contendo esse token.
-   Use body **x-www-form-urlencoded**, campos `email` e `senha`, com os valores
-   locais do `.env`. O login usa o filtro padrão do Spring Security.
-3. Obtenha um **novo token** via GET `/api/auth/csrf` após autenticar. O token
-   anterior é invalidado pelo Spring Security.
-4. Consulte `/api/auth/me`, `/api/produtos` e `/api/lojas`. Para cadastrar, envie
-   POST `/api/produtos` com o novo token no header, Content-Type application/json
-   e body `{"codigo":" prod-003 ","nome":" Borracha "}`.
-   O resultado usa código `PROD-003` e nome `Borracha`.
-5. Para logout, envie POST `/api/auth/logout` com CSRF válido. A sessão é
-   invalidada; uma nova consulta autenticada retorna 401. Obtenha novamente
-   CSRF antes de iniciar outro login.
-
-Não envie credenciais reais; use exclusivamente o funcionário de demonstração.
-O cadastro aceita código de até 60 caracteres e nome de até 150, após remover
-espaços nas extremidades. O código é normalizado para maiúsculas antes da
-verificação de unicidade; o banco também protege contra cadastros simultâneos.
-
-### Erros
-
-Erros contêm `codigo` e `mensagem`; validações podem incluir `campos`.
-400 indica dados inválidos, 401 autenticação ausente/credenciais inválidas,
-403 CSRF ausente/inválido, 404 recurso inexistente e 409 código duplicado.
-Falhas internas retornam 500 sem detalhes do banco na resposta.
-
-### Swagger / OpenAPI
-
-Com sessão autenticada, consulte `/v3/api-docs` para o contrato JSON e
-`/swagger-ui/index.html` para o Swagger. A documentação também é protegida;
-sem sessão retorna 401. O navegador precisa da sua própria sessão autenticada,
-independente do cookie jar do Postman. Entre pela interface e use **Abrir Swagger**.
-O contrato documenta o formulário de login, a sessão, CSRF e erros.
-
-## Transferências — Fase 3
-
-Depois de autenticar e obter o novo CSRF, envie POST `/api/transferencias` com
-Content-Type application/json, o header `X-CSRF-TOKEN` e:
-
-```json
-{
-  "produtoId": 1,
-  "lojaOrigemId": 1,
-  "lojaDestinoId": 2,
-  "quantidade": 10
-}
-```
-
-Use os IDs retornados pelas consultas; IDs não são reiniciados automaticamente.
-Com os dados originais, o caderno passa de 20/5 para 10/15 nas lojas A/B.
-A resposta contém `id`, `produto`, `lojaOrigem`, `lojaDestino`, `quantidade`,
-`dataHora` (Instant em UTC) e `usuario` (id, nome, email; sem senha/hash).
-Responsável e horário são definidos pelo servidor. Campos extras e quantidades
-fracionárias são rejeitados; envie apenas os quatro campos do contrato.
-
-GET `/api/transferencias` retorna apenas operações concluídas, ordenadas por
-horário decrescente e, em caso de empate, ID decrescente. Não há edição,
-cancelamento ou paginação neste MVP.
-
-### Regras e atomicidade
-
-- IDs e quantidade devem ser inteiros positivos; origem e destino são distintos.
-- Produto e lojas precisam existir; estoque ausente significa zero.
-- Saldo insuficiente retorna 409 `SALDO_INSUFICIENTE`, sem movimentação/histórico.
-- O saldo exato pode ser transferido; a origem fica com zero.
-- Destino ausente é criado dentro da mesma transação.
-- Débito, crédito e histórico são confirmados juntos; qualquer falha desfaz tudo.
-- Saldos usam inteiro de 32 bits; ultrapassar 2.147.483.647 no destino retorna
-  409 `LIMITE_ESTOQUE`, sem alterações.
-
-### Concorrência
-
-Cada transferência bloqueia o registro do produto com `PESSIMISTIC_WRITE` antes
-de ler os saldos. Movimentações do mesmo produto aguardam a transação anterior,
-inclusive quando precisam criar um destino inexistente. Produtos diferentes
-podem ser movimentados em paralelo. É uma escolha simples para o volume deste
-MVP; movimentações do mesmo produto entre lojas independentes também são
-serializadas. Futuras operações que alterem saldos precisam seguir esse protocolo.
-
-A suíte confirmou duas solicitações de 8 com saldo 10: uma conclui, a outra recebe
-409; os saldos ficam 2/13 e há somente um registro no histórico. Confirmou também
-créditos simultâneos num destino ausente e transferências em sentidos opostos.
-
-No backend iniciado pelo IntelliJ, também foram conferidos autenticação,
-histórico, contrato OpenAPI e uma tentativa de saldo insuficiente: 409, com
-estoque e histórico preservados. Os dados de demonstração permaneceram intactos.
-
-## Login pela interface e acesso ao Swagger
-
-1. Acesse `http://127.0.0.1:5173/`.
-2. Informe o e-mail de `DEMO_EMAIL` e a senha de `DEMO_PASSWORD` do `.env` local.
-3. Clique em **Entrar**. Credenciais inválidas exibem uma mensagem; durante o
-   envio, o formulário fica desabilitado para evitar solicitações repetidas.
-4. Após entrar, selecione **API** e clique em **Abrir Swagger**. Ele abre no endereço do frontend,
-   usando a mesma sessão. Não é necessário usar o console ou preencher Authorize.
-5. Para operações POST, clique em **Copiar token CSRF** no módulo **API** e cole
-   no campo `X-CSRF-TOKEN` do Swagger. Se a cópia automática não estiver disponível,
-   o token será exibido para seleção manual. Um novo login exige um novo token.
-6. Use **Sair** para encerrar a sessão. Recarregar a página enquanto autenticado
-   preserva o acesso; depois de sair, a tela pede login novamente.
-
-O Vite encaminha `/api`, `/swagger-ui` e `/v3/api-docs` ao backend. O OpenAPI usa
-um endereço de servidor relativo, permitindo executar chamadas pelo frontend ou
-pelo backend sem depender de uma porta fixa. Isso preserva o uso de cookies da
-sessão sem ampliar a configuração de CORS.
-
-Validação deste marco: lint e build do frontend passaram; os 39 testes do backend
-passaram, incluindo a asserção do endereço relativo do OpenAPI. No navegador,
-foram verificados senha incorreta, login válido, persistência ao recarregar,
-cópia do token, consulta de produtos pelo Swagger com resposta 200 e logout.
-O funcionário temporário usado na verificação foi removido.
-
-
-## Interface de gestão de estoque
-
-Após o login, use os módulos no menu:
-
-- **Produtos**: cadastre código e nome; o catálogo inclui os produtos cadastrados.
-  O código é normalizado pela API e duplicidades são rejeitadas.
-- **Estoque**: escolha uma loja para consultar todos os produtos e quantidades.
-  Produtos sem registro de estoque aparecem com zero.
-- **Transferências**: selecione produto, origem, destino e quantidade inteira
-  positiva. Confira os saldos exibidos e clique em **Confirmar transferência**.
-  A API valida o saldo atual e registra o funcionário autenticado e o horário.
-  Após a conclusão, saldos e histórico são consultados novamente.
-- **Histórico**: consulte operações concluídas, com produto, lojas, quantidade,
-  data/hora no fuso do navegador e responsável.
-- **API**: abra o Swagger e copie o token CSRF para operações manuais.
-
-**Atualizar** repete apenas as consultas. Se uma operação concluir e a consulta
-seguinte falhar, a confirmação permanece visível junto ao erro de atualização;
-não reenvie a transferência para atualizar a tela. Os formulários bloqueiam novos
-envios enquanto uma gravação está em andamento. Uma sessão expirada retorna ao
-login. Tabelas largas têm rolagem horizontal em telas menores.
-
-Validação deste marco: lint e build do frontend, mais verificação no navegador
-com usuário e produto temporários. Foram conferidos cadastro, código duplicado,
-estoque ausente como zero, transferência de 3 unidades (10/0 para 7/3), rejeição
-por saldo insuficiente e histórico com responsável e horário. Os registros de
-teste foram removidos sem alterar os produtos de demonstração.
-
-
-## Funcionários e administrador
-
-Cada pessoa entra com o próprio e-mail e senha, e as operações ficam registradas
-no nome dela. Há dois perfis:
-
-- **ADMIN**: tudo que o funcionário faz, mais a aba **Funcionários**, que lista
-  todos os usuários com o total de transferências, unidades movimentadas,
-  produtos cadastrados e a última atividade. **Ver atividades** mostra o que
-  cada um fez, da ação mais recente para a mais antiga.
-- **FUNCIONARIO**: produtos, estoque, transferências e histórico.
-
-O usuário de `DEMO_EMAIL` é criado (ou promovido) como administrador. Em bancos
-já existentes, a migração `V2` promove o primeiro usuário cadastrado.
-Excluir um funcionário o **desativa**: ele não consegue mais entrar, mas o
-histórico continua mostrando seu nome. O administrador não pode desativar a si
-mesmo nem retirar o próprio perfil de administrador.
-
-Endpoints (somente ADMIN; os de escrita exigem `X-CSRF-TOKEN`):
-
-| Método | Rota | Uso |
-| --- | --- | --- |
-| GET | `/api/usuarios` | Lista com o resumo de atividades |
-| POST | `/api/usuarios` | `{nome, email, senha, perfil}` |
-| PUT | `/api/usuarios/{id}` | `{nome, email, perfil, ativo, senha?}`; senha vazia mantém a atual |
-| DELETE | `/api/usuarios/{id}` | Desativa |
-| GET | `/api/usuarios/{id}/atividades` | Transferências e cadastros de produto |
-
-## Validação final e coleção Postman
-
-Importe `postman/EstoqueAPI.postman_collection.json` e
-`postman/local.postman_environment.example.json` no Postman. Preencha `baseUrl`,
-`email` e `password` somente no ambiente local. Use um cookie jar vazio para a
-primeira requisição (consulta anônima), depois execute a coleção inteira em ordem.
-O script obtém um token CSRF antes de cada escrita e o cookie da sessão é mantido
-pelo cliente. Não há senha, cookie ou token salvo nos arquivos distribuídos.
-
-Pré-condições: ambiente de teste local com carga `dev`, lojas **Loja A** e
-**Loja B**, produto **PROD-001** e saldo inicial de pelo menos 10 na origem.
-A coleção cria um produto por execução e duas transferências; a segunda devolve
-as 10 unidades à origem. Saldos são restaurados ao terminar com sucesso, mas os
-produtos e o histórico permanecem. Use uma base descartável para a entrega.
-Os testes de rollback e concorrência são executados pelo JUnit, não pelo Postman.
-
-Para repetir a validação HTTP em um ambiente separado:
-
-1. Execute a suíte JUnit seguindo a seção **Testes e verificações**.
-2. Na raiz, carregue `.env.test` e exporte os parâmetros para a API temporária:
+Em 26/11/2026 todas as abas foram verificadas no navegador, como admin e como
+funcionário, em desktop e em tela de celular (375 px), num ambiente isolado: API na
+porta 8081, banco de teste na 5434 e interface na 5174. Para repetir:
 
 ```sh
-set -a
-source .env.test
-set +a
-export SPRING_DATASOURCE_URL="${TEST_DATABASE_URL:-jdbc:postgresql://localhost:5434/estoque_test}"
-export SPRING_DATASOURCE_USERNAME="${TEST_DATABASE_USER:-estoque_test}"
-export SPRING_DATASOURCE_PASSWORD="$TEST_DATABASE_PASSWORD"
-# Defina DEMO_EMAIL e DEMO_PASSWORD com valores exclusivos de teste.
-cd backend
-java -jar target/estoque-api-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev --server.port=8081
+cd frontend
+ESTOQUE_API_PROXY_TARGET=http://127.0.0.1:8081 npm run dev -- --port 5174
 ```
 
-3. Use `http://127.0.0.1:8081` como `baseUrl` no ambiente local do Postman.
-   Para usar Newman no terminal, salve esse ambiente preenchido como
-   `postman/local.postman_environment.json` (ignorado pelo Git) e execute na raiz:
+Defeitos encontrados nessa verificação e corrigidos:
+
+1. Sessão de usuário desativado ou rebaixado continuava ativa (segurança).
+2. Tabela de funcionários escondia os botões de ação em telas menores.
+3. Código do produto quebrava em duas linhas na tabela de alterações.
+4. Transferência acima do saldo só era recusada pelo servidor; agora a tela avisa antes.
+
+### Coleção Postman
+
+`postman/EstoqueAPI.postman_collection.json` cobre o **escopo original do MVP**: 30
+cenários e 44 asserções (sessão, CSRF, produtos, lojas, estoque, transferências e
+logout). Importe-a com `postman/local.postman_environment.example.json` e preencha
+`baseUrl`, `email` e `password` apenas no ambiente local, com um cookie jar vazio.
+A coleção ainda **não** inclui usuários, entradas, lojas, edição e exclusões; esses
+recursos estão cobertos pela suíte JUnit acima. Para rodar pelo terminal:
 
 ```sh
 npm exec --yes --package=newman@6.2.2 -- newman run postman/EstoqueAPI.postman_collection.json -e postman/local.postman_environment.json
 ```
 
-4. Ao terminar, encerre a API temporária e remova o contêiner de testes usando
-   o comando `down` da seção de testes. Isso não remove o banco de desenvolvimento.
+## API
 
-A execução final usou API na porta 8081, PostgreSQL temporário na 5434 e uma cópia
-local da interface na 5174 com proxy para essa API. O ambiente habitual 5173/8080
-não foi modificado. Foram aprovadas 44 asserções Postman, em 30 cenários com
-43 chamadas HTTP contando as consultas auxiliares de CSRF. Resultados sanitizados:
-`entregas/evidencias/fase-5/`; rastreabilidade: `docs/plano-de-testes.md`.
+Todos os endpoints exigem sessão, exceto obter o CSRF e fazer login. Respostas em
+JSON, sem redirecionamentos. Operações de escrita exigem o header `X-CSRF-TOKEN`;
+obtenha um token novo após login e logout. O contrato completo está no Swagger
+(`/swagger-ui/index.html`) e em `/v3/api-docs`, também protegidos por sessão.
 
-### Limitações conhecidas
+### Autenticação
 
-O escopo é um MVP acadêmico local. Listagens não têm paginação; funcionários
-possuem as mesmas permissões. Lojas, funcionários e saldos iniciais vêm da carga
-de desenvolvimento. Não há entrada de estoque pela interface, administração de
-usuários, recuperação de senha, edição/exclusão de produtos ou cancelamento de
-transferência. O fluxo de ponta a ponta foi verificado pelo navegador com
-capturas; não existe uma suíte E2E reutilizável nem pipeline de CI neste marco.
-O bloqueio por produto serializa transferências do mesmo produto. Não foi definida
-meta de cobertura, carga máxima ou requisito de publicação pela disciplina.
+| Método | Rota | Resultado |
+| --- | --- | --- |
+| GET | `/api/auth/csrf` | Token CSRF |
+| POST | `/api/auth/login` | Formulário `email` e `senha`; inicia sessão |
+| POST | `/api/auth/logout` | 204; encerra a sessão |
+| GET | `/api/auth/me` | Usuário da sessão (id, nome, email, perfil) |
 
-## Rodar tudo com Docker, sem Java ou IntelliJ
+### Operação (qualquer usuário autenticado)
 
-Para quem só precisa usar o sistema, instale e abra o Docker Desktop. Extraia o
-projeto e, na raiz, copie `.env.example` para `.env` se esse arquivo ainda não
-existir. Defina senhas locais diferentes em `POSTGRES_PASSWORD` e `DEMO_PASSWORD`.
+| Método | Rota | Resultado |
+| --- | --- | --- |
+| GET | `/api/produtos` | Produtos ativos (com `estoqueMinimo`) |
+| GET | `/api/produtos/{id}` | Um produto |
+| POST | `/api/produtos` | `{codigo, nome, lojaId?, quantidade?, estoqueMinimo?}` |
+| GET | `/api/produtos/edicoes` | Registro de alterações |
+| GET | `/api/lojas` | Lojas |
+| GET | `/api/lojas/{id}/estoque` | Saldo de todos os produtos na loja (ausente = 0) |
+| POST | `/api/entradas` | `{produtoId, lojaId, quantidade, observacao?}` |
+| GET | `/api/entradas` | Entradas, da mais recente |
+| POST | `/api/transferencias` | `{produtoId, lojaOrigemId, lojaDestinoId, quantidade}` |
+| GET | `/api/transferencias` | Transferências, da mais recente |
 
-```sh
-docker compose -f compose.app.yaml up -d --build --wait
-```
+### Somente administrador
 
-Acesse `http://127.0.0.1:8090` e entre com `DEMO_EMAIL`/`DEMO_PASSWORD` do `.env`.
-O Docker constrói backend e frontend e cria o PostgreSQL com dados de demonstração.
-Não é necessário instalar Java, Maven, Node.js, PostgreSQL ou uma IDE no computador.
-O primeiro build depende de internet para baixar imagens e dependências.
+| Método | Rota | Resultado |
+| --- | --- | --- |
+| PUT | `/api/produtos/{id}` | `{codigo, nome, estoqueMinimo?, estoques?: [{lojaId, quantidade}]}` |
+| DELETE | `/api/produtos/{id}` | Exclui (some das listas; histórico preservado) |
+| DELETE | `/api/entradas/{id}` | Exclui e retira as unidades da loja |
+| DELETE | `/api/transferencias/{id}` | Exclui e devolve as unidades à origem |
+| POST | `/api/lojas` | `{nome}` |
+| PUT | `/api/lojas/{id}` | `{nome}` |
+| GET | `/api/usuarios` | Funcionários com resumo de atividades |
+| POST | `/api/usuarios` | `{nome, email, senha, perfil}` |
+| PUT | `/api/usuarios/{id}` | `{nome, email, perfil, ativo, senha?}` (senha vazia mantém a atual) |
+| DELETE | `/api/usuarios/{id}` | Desativa |
+| GET | `/api/usuarios/{id}/atividades` | Tudo o que o funcionário fez |
 
-O frontend Nginx encaminha API e Swagger ao backend na rede interna do Compose,
-preservando sessão e CSRF. Somente a interface é publicada, em loopback. Esse modo
-usa o projeto Compose `estoqueapi-app` e volume próprios, separados do ambiente
-local de desenvolvimento. Cada computador tem seu banco, sem sincronização.
+### Erros
 
-Para parar mantendo os dados:
+Formato: `{codigo, mensagem, campos?}`. **400** dados inválidos · **401** sem sessão ou
+credenciais inválidas · **403** CSRF inválido ou perfil sem permissão · **404** recurso
+inexistente · **409** conflito (código, e-mail ou loja duplicados; saldo insuficiente;
+limite do estoque) · **500** falha interna, sem detalhes do banco.
 
-```sh
-docker compose -f compose.app.yaml down
-```
+### Exemplo pelo Postman
 
-Para iniciar novamente, use `up -d --wait`; acrescente `--build` quando houver
-alterações no código. Não use `down -v` para parar: ele apaga o volume de dados.
-Para outra porta, defina `APP_PORT=8091` no `.env` e use a nova porta no navegador.
-Banco e API não são publicados em portas do computador neste modo.
+1. GET `/api/auth/csrf` e copie `token` (mantenha o cookie de sessão).
+2. POST `/api/auth/login` com o header `X-CSRF-TOKEN` e body *x-www-form-urlencoded* (`email`, `senha`).
+3. GET `/api/auth/csrf` de novo: o token anterior é invalidado no login.
+4. POST `/api/produtos` com o novo token e `{"codigo":" prod-003 ","nome":" Borracha "}`
+   gera o código `PROD-003` e o nome `Borracha`.
 
-O guia detalhado para iniciantes fica localmente em
-`docs/guia-para-rodar-o-sistema.md`; a versão PDF e o ZIP para compartilhar ficam
-em `output/`. Documentos e pacotes gerados permanecem fora do Git. Envie o ZIP
-junto do PDF, ou disponibilize esta configuração no repositório antes de orientar
-alguém a baixar pelo GitHub. Não envie `.env`, senhas ou o banco local.
+Pela interface é mais simples: entre, clique em **API → Abrir Swagger** e use
+**Copiar token CSRF** para as operações de escrita.
+
+## Regras de negócio
+
+- **Quantidades:** inteiros positivos (estoque inicial e mínimo aceitam zero); frações e
+  campos fora do contrato são rejeitados. Saldo máximo: 2.147.483.647 (409 `LIMITE_ESTOQUE`).
+- **Produtos:** código único, normalizado para maiúsculas e sem espaços nas pontas.
+  O código de um produto excluído não pode ser reutilizado.
+- **Estoque baixo:** quando a soma de todas as lojas fica abaixo do mínimo (mínimo 0 = sem alerta).
+- **Transferências:** origem e destino diferentes; saldo insuficiente retorna 409
+  `SALDO_INSUFICIENTE`; o destino sem registro é criado na mesma transação. Débito,
+  crédito e histórico são gravados juntos: qualquer falha desfaz tudo.
+- **Exclusões pelo admin:** desfazem o efeito no estoque. Uma exclusão é recusada se a
+  loja já não tiver as unidades (por exemplo, se já foram transferidas), para o estoque
+  nunca ficar negativo. Cada exclusão e edição fica registrada em Alterações.
+- **Responsável e horário** de cada operação são definidos pelo servidor.
+- **Concorrência:** toda operação que altera saldos bloqueia o produto
+  (`PESSIMISTIC_WRITE`) antes de ler os saldos. Operações do mesmo produto acontecem
+  uma de cada vez; produtos diferentes seguem em paralelo.
+
+## Banco de dados e migrações
+
+O Flyway cria e atualiza o esquema a cada inicialização (`backend/src/main/resources/db/migration/`):
+
+| Versão | Conteúdo |
+| --- | --- |
+| V1 | Usuários, lojas, produtos, estoques e transferências |
+| V2 | Perfis ADMIN/FUNCIONARIO, usuário ativo e responsável pelo cadastro do produto |
+| V3 | Registro de edições de produto |
+| V4 | Exclusão lógica de produtos e tipo de ação no registro |
+| V5 | Entradas de mercadoria |
+| V6 | Estoque mínimo por produto |
+| V7 | Exclusão de entradas no registro de alterações |
+
+## Organização do código
+
+- `backend/src/main/java/br/com/estoqueapi/`
+  - `controller/` endpoints REST · `service/` regras de negócio · `repository/` acesso a dados
+  - `entity/` tabelas · `dto/` contratos de entrada e saída · `config/` segurança, sessão, OpenAPI e dados de demonstração
+  - `exception/` tratamento padronizado de erros
+- `backend/src/test/` testes unitários e de integração.
+- `frontend/src/`
+  - `App.jsx` login e sessão · `Dashboard.jsx` abas e operações · `Painel.jsx`, `Lojas.jsx`, `Funcionarios.jsx`, `ProdutoEditor.jsx`
+  - `tableTools.jsx` e `tableUtils.js` busca, ordenação, paginação e CSV · `services/api.js` chamadas à API
+- `postman/` coleção e exemplo de ambiente, sem credenciais.
+- `compose.yaml` banco de desenvolvimento · `compose.test.yaml` banco de testes · `compose.app.yaml` sistema completo.
+
+## Limitações conhecidas
+
+- Projeto acadêmico: sem recuperação de senha, sem cadastro público e sem separação de
+  dados por empresa. Todos os usuários compartilham as mesmas lojas e produtos.
+- Lojas não podem ser excluídas (têm estoque e histórico ligados a elas).
+- Busca, filtros e paginação são feitos no navegador; para volumes muito grandes, o ideal
+  seria paginar na API.
+- A coleção Postman cobre só o escopo original do MVP (ver [Coleção Postman](#coleção-postman)).
+- Não há suíte E2E automatizada nem pipeline de CI; a interface foi verificada manualmente.
+- Não foi feito teste de carga; o bloqueio por produto serializa operações do mesmo produto.
+- No plano gratuito do Render o serviço "dorme" após 15 minutos sem acesso e o banco
+  expira em 30 dias (ver [RENDER.md](RENDER.md)).

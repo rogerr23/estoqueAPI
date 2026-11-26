@@ -18,11 +18,12 @@ public class EntradaService {
     private final EstoqueRepository estoques;
     private final UsuarioRepository usuarios;
     private final EntradaRepository entradas;
+    private final ProdutoEdicaoRepository registros;
 
     public EntradaService(ProdutoRepository produtos, LojaRepository lojas, EstoqueRepository estoques,
-            UsuarioRepository usuarios, EntradaRepository entradas) {
+            UsuarioRepository usuarios, EntradaRepository entradas, ProdutoEdicaoRepository registros) {
         this.produtos = produtos; this.lojas = lojas; this.estoques = estoques;
-        this.usuarios = usuarios; this.entradas = entradas;
+        this.usuarios = usuarios; this.entradas = entradas; this.registros = registros;
     }
 
     @Transactional
@@ -42,6 +43,32 @@ public class EntradaService {
         var salva = entradas.saveAndFlush(new Entrada(produto, loja, entrada.quantidade(), entrada.observacao(),
             Instant.now(), usuarios.getReferenceById(usuarioId)));
         return EntradaResponse.from(salva);
+    }
+
+    /**
+     * Somente ADMIN: desfaz a entrada (retira as unidades da loja) e apaga o registro.
+     * Recusa se a loja já não tiver essas unidades, para o estoque nunca ficar negativo.
+     */
+    @Transactional
+    public void excluir(Long id, Long adminId) {
+        var entrada = entradas.findById(id).orElseThrow(() ->
+            new NegocioException(HttpStatus.NOT_FOUND, "ENTRADA_NAO_ENCONTRADA", "Entrada não encontrada"));
+        // Mesmo bloqueio por produto usado nas outras movimentações.
+        var produto = produtos.buscarParaTransferencia(entrada.getProduto().getId()).orElseThrow();
+        var loja = entrada.getLoja();
+        var saldo = estoques.findByLojaIdAndProdutoId(loja.getId(), produto.getId());
+        if (saldo.isEmpty() || saldo.get().getQuantidade() < entrada.getQuantidade()) {
+            throw new NegocioException(HttpStatus.CONFLICT, "SALDO_INSUFICIENTE",
+                "A loja já não tem essas unidades para retirar; ajuste o estoque antes de excluir");
+        }
+        saldo.get().debitar(entrada.getQuantidade());
+        var autor = entrada.getUsuario().getNome();
+        entradas.delete(entrada);
+        registros.save(new ProdutoEdicao(produto, usuarios.getReferenceById(adminId), Instant.now(),
+            "Excluiu a entrada #%d de %s: %d un. na %s (estoque retirado da loja)".formatted(
+                id, autor, entrada.getQuantidade(), loja.getNome()), "EXCLUSAO_ENTRADA"));
+        estoques.flush();
+        entradas.flush();
     }
 
     @Transactional(readOnly = true)

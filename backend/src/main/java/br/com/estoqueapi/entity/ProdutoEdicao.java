@@ -25,7 +25,7 @@ public class ProdutoEdicao {
     @Column(nullable = false, length = 2000)
     private String alteracoes;
 
-    /** EDICAO, EXCLUSAO_PRODUTO ou EXCLUSAO_TRANSFERENCIA. */
+    /** EDICAO, EXCLUSAO_PRODUTO, EXCLUSAO_TRANSFERENCIA ou EXCLUSAO_ENTRADA. */
     @Column(nullable = false, length = 30)
     private String acao = "EDICAO";
 

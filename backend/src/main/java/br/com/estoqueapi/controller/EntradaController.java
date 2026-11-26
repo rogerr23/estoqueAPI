@@ -23,6 +23,13 @@ public class EntradaController {
         return ResponseEntity.status(201).body(entradas.registrar(entrada, funcionario.getUsuario().id()));
     }
 
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Excluir entrada e retirar as unidades da loja (somente administrador)")
+    public ResponseEntity<Void> excluir(@PathVariable Long id, @AuthenticationPrincipal FuncionarioPrincipal admin) {
+        entradas.excluir(id, admin.getUsuario().id());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     @Operation(summary = "Listar entradas da mais recente para a mais antiga")
     public List<EntradaResponse> listar() { return entradas.listar(); }

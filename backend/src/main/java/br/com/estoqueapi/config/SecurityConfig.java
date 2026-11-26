@@ -30,7 +30,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/usuarios", "/api/usuarios/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/produtos/**", "/api/lojas/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/lojas").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/produtos/**", "/api/transferencias/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/produtos/**", "/api/transferencias/**", "/api/entradas/**").hasRole("ADMIN")
                 .anyRequest().authenticated())
             .formLogin(login -> login
                 .loginPage("/api/auth/login")

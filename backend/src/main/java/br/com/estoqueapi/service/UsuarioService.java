@@ -103,6 +103,7 @@ public class UsuarioService {
             switch (e.getAcao()) {
                 case "EXCLUSAO_PRODUTO" -> "EXCLUSAO_PRODUTO";
                 case "EXCLUSAO_TRANSFERENCIA" -> "EXCLUSAO_TRANSFERENCIA";
+                case "EXCLUSAO_ENTRADA" -> "EXCLUSAO_ENTRADA";
                 default -> "EDICAO_PRODUTO";
             }, e.getDataHora(), "EDICAO".equals(e.getAcao())
                 ? "Editou o produto %s: %s".formatted(e.getProduto().getCodigo(), e.getAlteracoes())
