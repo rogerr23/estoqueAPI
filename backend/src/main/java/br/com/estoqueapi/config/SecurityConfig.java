@@ -18,13 +18,18 @@ public class SecurityConfig {
     PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper json) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper json,
+            org.springframework.beans.factory.ObjectProvider<br.com.estoqueapi.repository.UsuarioRepository> usuarios) throws Exception {
+        // Sem repositório (testes só da camada web), o filtro de sessão atual não é registrado.
+        usuarios.ifAvailable(repo -> http.addFilterBefore(new SessaoAtualFilter(repo, json),
+            org.springframework.security.web.access.intercept.AuthorizationFilter.class));
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers("/api/usuarios", "/api/usuarios/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/produtos/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/produtos/**", "/api/lojas/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/lojas").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/produtos/**", "/api/transferencias/**").hasRole("ADMIN")
                 .anyRequest().authenticated())
             .formLogin(login -> login

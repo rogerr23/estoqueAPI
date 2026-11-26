@@ -1,15 +1,26 @@
 * { box-sizing: border-box; }
 :root {
-  --graphite: #f2f3f4;
+  --graphite: #f4f5f6;
   --graphite-deep: #e2e4e7;
   --surface: #ffffff;
   --navy: #203a5b;
   --navy-hover: #2a4a70;
   --accent: #3d5068;
-  --text: #30343b;
-  --muted: #626971;
-  --border: #bdc3ca;
-  font-family: system-ui, -apple-system, sans-serif;
+  --text: #23272d;
+  --muted: #6a7380;
+  --border: #d3d8de;
+  --line: #e3e6ea;
+  /* Cabeçalho escuro (modelo D2) */
+  --bar: #1f2a37;
+  --bar-tabs: #263342;
+  --bar-active: #2f3e50;
+  --bar-line: #334152;
+  --bar-text: #c9d1db;
+  --bar-muted: #8b98a9;
+  --gold: #c4a052;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
   color: var(--text);
   background: var(--graphite);
   font-synthesis: none;

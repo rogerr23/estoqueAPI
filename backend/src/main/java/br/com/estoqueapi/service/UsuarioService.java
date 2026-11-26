@@ -19,12 +19,14 @@ public class UsuarioService {
     private final TransferenciaRepository transferencias;
     private final ProdutoRepository produtos;
     private final ProdutoEdicaoRepository edicoes;
+    private final EntradaRepository entradas;
     private final PasswordEncoder encoder;
 
     public UsuarioService(UsuarioRepository usuarios, TransferenciaRepository transferencias,
-            ProdutoRepository produtos, ProdutoEdicaoRepository edicoes, PasswordEncoder encoder) {
+            ProdutoRepository produtos, ProdutoEdicaoRepository edicoes, EntradaRepository entradas,
+            PasswordEncoder encoder) {
         this.usuarios = usuarios; this.transferencias = transferencias;
-        this.produtos = produtos; this.edicoes = edicoes; this.encoder = encoder;
+        this.produtos = produtos; this.edicoes = edicoes; this.entradas = entradas; this.encoder = encoder;
     }
 
     @Transactional(readOnly = true)
@@ -35,14 +37,17 @@ public class UsuarioService {
         produtos.resumoPorUsuario().forEach(l -> cadastros.put((Long) l[0], l));
         Map<Long, Instant> ultimasEdicoes = new HashMap<>();
         edicoes.ultimaPorUsuario().forEach(l -> ultimasEdicoes.put((Long) l[0], (Instant) l[1]));
+        Map<Long, Object[]> recebimentos = new HashMap<>();
+        entradas.resumoPorUsuario().forEach(l -> recebimentos.put((Long) l[0], l));
         return usuarios.findAllByOrderByNomeAscIdAsc().stream().map(u -> {
             var m = movimentos.get(u.getId());
             var c = cadastros.get(u.getId());
+            var r = recebimentos.get(u.getId());
             Instant ultima = maisRecente(maisRecente(m == null ? null : (Instant) m[3], c == null ? null : (Instant) c[2]),
-                ultimasEdicoes.get(u.getId()));
+                maisRecente(ultimasEdicoes.get(u.getId()), r == null ? null : (Instant) r[2]));
             return new FuncionarioResumo(u.getId(), u.getNome(), u.getEmail(), u.getPerfil().name(), u.isAtivo(),
                 m == null ? 0 : (Long) m[1], m == null ? 0 : ((Number) m[2]).longValue(),
-                c == null ? 0 : (Long) c[1], ultima);
+                c == null ? 0 : (Long) c[1], r == null ? 0 : (Long) r[1], ultima);
         }).toList();
     }
 
@@ -90,6 +95,10 @@ public class UsuarioService {
                 t.getLojaOrigem().getNome(), t.getLojaDestino().getNome()))));
         produtos.findAllByCadastradoPorIdOrderByCadastradoEmDescIdDesc(id).forEach(p -> lista.add(new AtividadeResponse(
             "CADASTRO_PRODUTO", p.getCadastradoEm(), "Cadastrou o produto %s (%s)".formatted(p.getCodigo(), p.getNome()))));
+        entradas.findAllByUsuarioIdOrderByDataHoraDescIdDesc(id).forEach(e -> lista.add(new AtividadeResponse(
+            "ENTRADA", e.getDataHora(), "Registrou entrada de %d un. de %s (%s) na %s%s".formatted(
+                e.getQuantidade(), e.getProduto().getCodigo(), e.getProduto().getNome(), e.getLoja().getNome(),
+                e.getObservacao() == null ? "" : " — " + e.getObservacao()))));
         edicoes.findAllByUsuarioIdOrderByDataHoraDescIdDesc(id).forEach(e -> lista.add(new AtividadeResponse(
             switch (e.getAcao()) {
                 case "EXCLUSAO_PRODUTO" -> "EXCLUSAO_PRODUTO";

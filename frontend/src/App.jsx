@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { csrfToken, currentUser, login, logout } from './services/api'
 import Dashboard from './Dashboard'
+import useAutoClear from './useAutoClear'
 import './App.css'
 
 export default function App() {
@@ -12,6 +13,8 @@ export default function App() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [tokenFallback, setTokenFallback] = useState('')
+  useAutoClear(notice, setNotice, 4000)
+  useAutoClear(error, setError, 8000)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -98,10 +101,10 @@ export default function App() {
 
   return (
     <main className="shell">
-      <header className="intro-panel">
+      {!user && <header className="intro-panel">
         <div className="brand"><span className="brand-mark" aria-hidden="true">E</span>EstoqueAPI</div>
         <span className="intro-footer">Controle de estoque entre lojas</span>
-      </header>
+      </header>}
 
       <div className="workspace">
         {loading ? <p className="loading" role="status">Verificando sua sessão…</p> : user ? (

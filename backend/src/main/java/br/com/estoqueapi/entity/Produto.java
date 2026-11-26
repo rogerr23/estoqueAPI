@@ -26,6 +26,10 @@ public class Produto {
     @Column(nullable = false)
     private boolean ativo = true;
 
+    /** Abaixo deste total (todas as lojas) o produto aparece como estoque baixo; 0 desliga o alerta. */
+    @Column(name = "estoque_minimo", nullable = false)
+    private int estoqueMinimo;
+
     protected Produto() {}
 
     public Produto(String codigo, String nome) {
@@ -44,6 +48,11 @@ public class Produto {
         this.nome = nome;
     }
 
+    public void definirEstoqueMinimo(int minimo) {
+        if (minimo < 0) throw new IllegalArgumentException("Estoque mínimo inválido");
+        this.estoqueMinimo = minimo;
+    }
+    public int getEstoqueMinimo() { return estoqueMinimo; }
     public void excluir() { this.ativo = false; }
     public boolean isAtivo() { return ativo; }
     public Long getId() { return id; }

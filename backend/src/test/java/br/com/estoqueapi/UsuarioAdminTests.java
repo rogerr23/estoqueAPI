@@ -79,6 +79,28 @@ class UsuarioAdminTests extends DatabaseTestSupport {
     }
 
     @Test
+    void desativarOuMudarPerfilEncerraASessaoAbertaNaHora() throws Exception {
+        var admin = login("teste@example.test", PASSWORD);
+        String email = "sessao-" + UUID.randomUUID() + "@example.test";
+        long id = criar(admin, email, "ADMIN");
+        var outro = login(email, "segredo1");
+        mvc.perform(get("/api/usuarios").session(outro)).andExpect(status().isOk());
+        // Rebaixado a funcionário: a sessão de admin cai imediatamente.
+        mvc.perform(put("/api/usuarios/" + id).session(admin).with(csrf()).contentType("application/json")
+                .content("{\"nome\":\"Maria\",\"email\":\"" + email + "\",\"perfil\":\"FUNCIONARIO\"}"))
+            .andExpect(status().isOk());
+        mvc.perform(get("/api/usuarios").session(outro)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/produtos").session(outro)).andExpect(status().isUnauthorized());
+        // Desativado: o novo login como funcionário também cai.
+        var funcionario = login(email, "segredo1");
+        mvc.perform(get("/api/produtos").session(funcionario)).andExpect(status().isOk());
+        mvc.perform(delete("/api/usuarios/" + id).session(admin).with(csrf())).andExpect(status().isNoContent());
+        mvc.perform(get("/api/produtos").session(funcionario)).andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("codigo").value("NAO_AUTENTICADO"));
+        mvc.perform(get("/api/produtos").session(admin)).andExpect(status().isOk());
+    }
+
+    @Test
     void adminNaoRemoveOProprioAcesso() throws Exception {
         var admin = login("teste@example.test", PASSWORD);
         var me = json.readTree(mvc.perform(get("/api/auth/me").session(admin)).andReturn().getResponse().getContentAsString());

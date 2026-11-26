@@ -88,3 +88,7 @@ export const updateProduct = (id, data) => send('PUT', `/api/produtos/${id}`, da
 export const productEdits = (signal) => request('/api/produtos/edicoes', { signal })
 export const deleteProduct = (id) => send('DELETE', `/api/produtos/${id}`)
 export const deleteTransfer = (id) => send('DELETE', `/api/transferencias/${id}`)
+export const entries = (signal) => request('/api/entradas', { signal })
+export const createEntry = (data) => post('/api/entradas', data)
+export const createStore = (data) => post('/api/lojas', data)
+export const renameStore = (id, data) => send('PUT', `/api/lojas/${id}`, data)

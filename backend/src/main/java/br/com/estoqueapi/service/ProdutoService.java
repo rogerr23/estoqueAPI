@@ -47,8 +47,9 @@ public class ProdutoService {
         });
         var responsavel = usuarioId == null ? null : usuarios.getReferenceById(usuarioId);
         try {
-            var produto = produtos.saveAndFlush(new Produto(entrada.codigo(), entrada.nome(),
-                responsavel, java.time.Instant.now()));
+            var novo = new Produto(entrada.codigo(), entrada.nome(), responsavel, java.time.Instant.now());
+            if (entrada.estoqueMinimo() != null) novo.definirEstoqueMinimo(entrada.estoqueMinimo());
+            var produto = produtos.saveAndFlush(novo);
             // Produto novo nunca tem estoque: cria o saldo inicial na loja escolhida (mesma transação).
             if (loja != null) estoques.saveAndFlush(new Estoque(loja, produto, quantidade));
             return ProdutoResponse.from(produto);
@@ -79,6 +80,10 @@ public class ProdutoService {
         var mudancas = new java.util.ArrayList<String>();
         if (!produto.getCodigo().equals(entrada.codigo())) mudancas.add("Código: " + produto.getCodigo() + " → " + entrada.codigo());
         if (!produto.getNome().equals(entrada.nome())) mudancas.add("Nome: " + produto.getNome() + " → " + entrada.nome());
+        if (entrada.estoqueMinimo() != null && entrada.estoqueMinimo() != produto.getEstoqueMinimo()) {
+            mudancas.add("Estoque mínimo: " + produto.getEstoqueMinimo() + " → " + entrada.estoqueMinimo());
+            produto.definirEstoqueMinimo(entrada.estoqueMinimo());
+        }
         produto.atualizar(entrada.codigo(), entrada.nome());
         for (var saldo : saldos) {
             var loja = lojas.findById(saldo.lojaId()).orElseThrow(() ->

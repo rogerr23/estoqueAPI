@@ -24,6 +24,27 @@ public class LojaService {
         return lojas.findAllByOrderByIdAsc().stream().map(l -> new LojaResponse(l.getId(), l.getNome())).toList();
     }
 
+    /** Somente ADMIN (ver SecurityConfig). A loja nova começa sem estoque. */
+    @Transactional
+    public LojaResponse criar(LojaRequest entrada) {
+        if (lojas.existsByNomeIgnoreCase(entrada.nome())) throw nomeDuplicado();
+        var loja = lojas.saveAndFlush(new br.com.estoqueapi.entity.Loja(entrada.nome()));
+        return new LojaResponse(loja.getId(), loja.getNome());
+    }
+
+    @Transactional
+    public LojaResponse renomear(Long id, LojaRequest entrada) {
+        var loja = lojas.findById(id).orElseThrow(() ->
+            new NegocioException(HttpStatus.NOT_FOUND, "LOJA_NAO_ENCONTRADA", "Loja não encontrada"));
+        if (lojas.existsByNomeIgnoreCaseAndIdNot(entrada.nome(), id)) throw nomeDuplicado();
+        loja.renomear(entrada.nome());
+        return new LojaResponse(loja.getId(), loja.getNome());
+    }
+
+    private NegocioException nomeDuplicado() {
+        return new NegocioException(HttpStatus.CONFLICT, "LOJA_DUPLICADA", "Já existe uma loja com esse nome");
+    }
+
     public List<EstoqueResponse> estoque(Long lojaId) {
         if (!lojas.existsById(lojaId)) {
             throw new NegocioException(HttpStatus.NOT_FOUND, "LOJA_NAO_ENCONTRADA", "Loja não encontrada");

@@ -83,6 +83,17 @@ public class OpenApiConfig {
                 operation.getResponses().addApiResponse("400", erro("Dados inválidos"));
                 if (path.contains("{id}") || (path.equals("/api/transferencias") && method == PathItem.HttpMethod.POST)) operation.getResponses().addApiResponse("404", erro("Recurso inexistente"));
             }
+            if ((path.equals("/api/lojas") && method == PathItem.HttpMethod.POST) || (path.equals("/api/lojas/{id}") && method == PathItem.HttpMethod.PUT)) {
+                operation.addParametersItem(new Parameter().name("X-CSRF-TOKEN").in("header").required(true).schema(new StringSchema()));
+                operation.getResponses().addApiResponse("403", erro("Restrito a administradores ou CSRF inválido"));
+                operation.getResponses().addApiResponse("409", erro("Nome de loja duplicado"));
+            }
+            if (path.equals("/api/entradas") && method == PathItem.HttpMethod.POST) {
+                operation.addParametersItem(new Parameter().name("X-CSRF-TOKEN").in("header").required(true).schema(new StringSchema()));
+                operation.getResponses().addApiResponse("400", erro("Dados inválidos"));
+                operation.getResponses().addApiResponse("404", erro("Produto ou loja inexistente"));
+                operation.getResponses().addApiResponse("409", erro("Limite do estoque"));
+            }
             if ((path.equals("/api/produtos") || path.equals("/api/transferencias")) && method == PathItem.HttpMethod.POST) {
                 operation.addParametersItem(new Parameter().name("X-CSRF-TOKEN").in("header").required(true).schema(new StringSchema()));
                 operation.getResponses().addApiResponse("409", erro(path.equals("/api/produtos") ? "Código duplicado" : "Saldo insuficiente ou limite do estoque"));

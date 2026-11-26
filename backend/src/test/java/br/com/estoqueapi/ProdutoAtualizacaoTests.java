@@ -82,6 +82,27 @@ class ProdutoAtualizacaoTests extends DatabaseTestSupport {
     }
 
     @Test
+    void estoqueMinimoNoCadastroENaEdicaoFicaRegistrado() throws Exception {
+        var admin = login("teste@example.test", PASSWORD);
+        String codigo = codigo();
+        var r = mvc.perform(post("/api/produtos").session(admin).with(csrf()).contentType("application/json")
+                .content("{\"codigo\":\"" + codigo + "\",\"nome\":\"Min\",\"estoqueMinimo\":5}"))
+            .andExpect(status().isCreated()).andExpect(jsonPath("estoqueMinimo").value(5)).andReturn();
+        long id = json.readTree(r.getResponse().getContentAsString()).get("id").asLong();
+        mvc.perform(put("/api/produtos/" + id).session(admin).with(csrf()).contentType("application/json")
+                .content("{\"codigo\":\"" + codigo + "\",\"nome\":\"Min\",\"estoqueMinimo\":8}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("estoqueMinimo").value(8));
+        mvc.perform(get("/api/produtos/edicoes").session(admin)).andExpect(jsonPath("$[0].alteracoes").value("Estoque mínimo: 5 → 8"));
+        // Sem o campo, o mínimo é mantido.
+        mvc.perform(put("/api/produtos/" + id).session(admin).with(csrf()).contentType("application/json")
+                .content("{\"codigo\":\"" + codigo + "\",\"nome\":\"Min 2\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("estoqueMinimo").value(8));
+        mvc.perform(post("/api/produtos").session(admin).with(csrf()).contentType("application/json")
+                .content("{\"codigo\":\"" + codigo() + "\",\"nome\":\"X\",\"estoqueMinimo\":-1}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void codigoDuplicadoEhRejeitado() throws Exception {
         var admin = login("teste@example.test", PASSWORD);
         String existente = codigo();

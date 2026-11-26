@@ -9,7 +9,9 @@ import java.util.Locale;
 public record ProdutoAtualizacaoRequest(
     @NotBlank(message = "Código é obrigatório") @Size(max = 60, message = "Código deve ter até 60 caracteres") String codigo,
     @NotBlank(message = "Nome é obrigatório") @Size(max = 150, message = "Nome deve ter até 150 caracteres") String nome,
-    @Valid List<@NotNull Saldo> estoques
+    @Valid List<@NotNull Saldo> estoques,
+    /** Opcional: ausente mantém o valor atual. */
+    @PositiveOrZero(message = "Estoque mínimo não pode ser negativo") Integer estoqueMinimo
 ) {
     public ProdutoAtualizacaoRequest {
         codigo = codigo == null ? null : codigo.strip().toUpperCase(Locale.ROOT);
