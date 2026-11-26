@@ -17,11 +17,12 @@ public class TransferenciaService {
     private final EstoqueRepository estoques;
     private final UsuarioRepository usuarios;
     private final TransferenciaRepository transferencias;
+    private final ProdutoEdicaoRepository registros;
 
     public TransferenciaService(ProdutoRepository produtos, LojaRepository lojas, EstoqueRepository estoques,
-            UsuarioRepository usuarios, TransferenciaRepository transferencias) {
+            UsuarioRepository usuarios, TransferenciaRepository transferencias, ProdutoEdicaoRepository registros) {
         this.produtos = produtos; this.lojas = lojas; this.estoques = estoques;
-        this.usuarios = usuarios; this.transferencias = transferencias;
+        this.usuarios = usuarios; this.transferencias = transferencias; this.registros = registros;
     }
 
     @Transactional
@@ -29,7 +30,7 @@ public class TransferenciaService {
         validar(entrada);
         // Um bloqueio por produto serializa suas movimentações, inclusive quando
         // o estoque de destino ainda não existe. Produtos diferentes seguem em paralelo.
-        var produto = produtos.buscarParaTransferencia(entrada.produtoId()).orElseThrow(() ->
+        var produto = produtos.buscarParaTransferencia(entrada.produtoId()).filter(Produto::isAtivo).orElseThrow(() ->
             erro(HttpStatus.NOT_FOUND, "PRODUTO_NAO_ENCONTRADO", "Produto não encontrado"));
         var origem = buscarLoja(entrada.lojaOrigemId());
         var destino = buscarLoja(entrada.lojaDestinoId());
@@ -52,6 +53,38 @@ public class TransferenciaService {
         var transferencia = transferencias.saveAndFlush(new Transferencia(produto, origem, destino,
             entrada.quantidade(), Instant.now(), usuario));
         return TransferenciaResponse.from(transferencia);
+    }
+
+    /**
+     * Somente ADMIN: desfaz a transferência (devolve as unidades à origem) e apaga o registro.
+     * Recusa se a loja de destino já não tiver as unidades para devolver.
+     */
+    @Transactional
+    public void excluir(Long id, Long adminId) {
+        var transferencia = transferencias.findById(id).orElseThrow(() ->
+            erro(HttpStatus.NOT_FOUND, "TRANSFERENCIA_NAO_ENCONTRADA", "Transferência não encontrada"));
+        // Mesmo bloqueio por produto usado nas transferências, para os saldos não se cruzarem.
+        var produto = produtos.buscarParaTransferencia(transferencia.getProduto().getId()).orElseThrow();
+        var origem = transferencia.getLojaOrigem();
+        var destino = transferencia.getLojaDestino();
+        int quantidade = transferencia.getQuantidade();
+        var saldoDestino = estoques.findByLojaIdAndProdutoId(destino.getId(), produto.getId());
+        if (saldoDestino.isEmpty() || saldoDestino.get().getQuantidade() < quantidade) {
+            throw erro(HttpStatus.CONFLICT, "SALDO_INSUFICIENTE",
+                "A loja de destino não tem mais essas unidades para devolver; ajuste o estoque antes de excluir");
+        }
+        var saldoOrigem = estoques.findByLojaIdAndProdutoId(origem.getId(), produto.getId())
+            .orElseGet(() -> new Estoque(origem, produto, 0));
+        saldoDestino.get().debitar(quantidade);
+        saldoOrigem.creditar(quantidade);
+        estoques.save(saldoOrigem);
+        var autor = transferencia.getUsuario().getNome();
+        transferencias.delete(transferencia);
+        registros.save(new ProdutoEdicao(produto, usuarios.getReferenceById(adminId), Instant.now(),
+            "Excluiu a transferência #%d de %s: %d un. de %s para %s (estoque devolvido à origem)".formatted(
+                id, autor, quantidade, origem.getNome(), destino.getNome()), "EXCLUSAO_TRANSFERENCIA"));
+        estoques.flush();
+        transferencias.flush();
     }
 
     @Transactional(readOnly = true)

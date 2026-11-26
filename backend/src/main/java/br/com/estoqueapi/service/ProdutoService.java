@@ -40,7 +40,11 @@ public class ProdutoService {
         }
         var loja = entrada.lojaId() == null ? null : lojas.findById(entrada.lojaId()).orElseThrow(() ->
             new NegocioException(HttpStatus.NOT_FOUND, "LOJA_NAO_ENCONTRADA", "Loja não encontrada"));
-        if (produtos.existsByCodigo(entrada.codigo())) throw duplicado();
+        produtos.findByCodigo(entrada.codigo()).ifPresent(existente -> {
+            if (!existente.isAtivo()) throw new NegocioException(HttpStatus.CONFLICT, "CODIGO_DUPLICADO",
+                "Esse código pertence a um produto excluído; use outro código");
+            throw duplicado();
+        });
         var responsavel = usuarioId == null ? null : usuarios.getReferenceById(usuarioId);
         try {
             var produto = produtos.saveAndFlush(new Produto(entrada.codigo(), entrada.nome(),
@@ -65,8 +69,7 @@ public class ProdutoService {
     @Transactional
     public ProdutoResponse atualizar(Long id, ProdutoAtualizacaoRequest entrada, Long usuarioId) {
         // Mesmo bloqueio das transferências: o ajuste não se mistura com uma movimentação em andamento.
-        var produto = produtos.buscarParaTransferencia(id).orElseThrow(() ->
-            new NegocioException(HttpStatus.NOT_FOUND, "PRODUTO_NAO_ENCONTRADO", "Produto não encontrado"));
+        var produto = buscarAtivoBloqueado(id);
         if (produtos.existsByCodigoAndIdNot(entrada.codigo(), id)) throw duplicado();
         var saldos = entrada.estoques() == null ? List.<ProdutoAtualizacaoRequest.Saldo>of() : entrada.estoques();
         if (saldos.stream().map(ProdutoAtualizacaoRequest.Saldo::lojaId).distinct().count() != saldos.size()) {
@@ -104,6 +107,20 @@ public class ProdutoService {
         return ProdutoResponse.from(produto);
     }
 
+    /** Somente ADMIN: o produto some das listas e do estoque, mas o histórico continua mostrando-o. */
+    @Transactional
+    public void excluir(Long id, Long usuarioId) {
+        var produto = buscarAtivoBloqueado(id);
+        produto.excluir();
+        edicoes.save(new ProdutoEdicao(produto, usuarios.getReferenceById(usuarioId), java.time.Instant.now(),
+            "Excluiu o produto " + produto.getCodigo() + " (" + produto.getNome() + ")", "EXCLUSAO_PRODUTO"));
+    }
+
+    private Produto buscarAtivoBloqueado(Long id) {
+        return produtos.buscarParaTransferencia(id).filter(Produto::isAtivo).orElseThrow(() ->
+            new NegocioException(HttpStatus.NOT_FOUND, "PRODUTO_NAO_ENCONTRADO", "Produto não encontrado"));
+    }
+
     private static boolean violouUnico(Throwable causa) {
         while (causa != null) {
             if (causa instanceof java.sql.SQLException sql && "23505".equals(sql.getSQLState())) return true;
@@ -120,12 +137,12 @@ public class ProdutoService {
 
     @Transactional(readOnly = true)
     public List<ProdutoResponse> listar() {
-        return produtos.findAllByOrderByIdAsc().stream().map(ProdutoResponse::from).toList();
+        return produtos.findAllByAtivoTrueOrderByIdAsc().stream().map(ProdutoResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
     public ProdutoResponse buscar(Long id) {
-        return produtos.findById(id).map(ProdutoResponse::from).orElseThrow(() ->
+        return produtos.findById(id).filter(Produto::isAtivo).map(ProdutoResponse::from).orElseThrow(() ->
             new NegocioException(HttpStatus.NOT_FOUND, "PRODUTO_NAO_ENCONTRADO", "Produto não encontrado"));
     }
 

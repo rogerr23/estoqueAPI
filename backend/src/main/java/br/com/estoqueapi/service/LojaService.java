@@ -30,7 +30,7 @@ public class LojaService {
         }
         var saldos = estoques.findAllByLojaId(lojaId).stream()
             .collect(Collectors.toMap(e -> e.getProduto().getId(), e -> e.getQuantidade()));
-        return produtos.findAllByOrderByIdAsc().stream().map(p ->
+        return produtos.findAllByAtivoTrueOrderByIdAsc().stream().map(p ->
             new EstoqueResponse(p.getId(), p.getCodigo(), p.getNome(), saldos.getOrDefault(p.getId(), 0))).toList();
     }
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { products, stores, stock, transfers, productEdits, createProduct, createTransfer } from './services/api'
+import { products, stores, stock, transfers, productEdits, createProduct, createTransfer, deleteProduct, deleteTransfer } from './services/api'
 import Funcionarios from './Funcionarios'
 import ProdutoEditor from './ProdutoEditor'
 
@@ -104,6 +104,22 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
       else setError(e.campos ? `${e.message} ${Object.values(e.campos).join(' ')}` : e.message)
     } finally { lock.current = false; setSaving(false) }
   }
+  async function remove(kind, item) {
+    const question = kind === 'product'
+      ? `Excluir o produto ${item.codigo}? Ele sai das listas e do estoque, mas continua no histórico.`
+      : `Excluir a transferência #${item.id}? As ${item.quantidade} unidade(s) voltam para ${item.lojaOrigem.nome}.`
+    if (lock.current || !window.confirm(question)) return
+    lock.current = true
+    setSaving(true); setError(''); setNotice('')
+    try {
+      if (kind === 'product') { await deleteProduct(item.id); setEditingProduct(null); setNotice(`Produto ${item.codigo} excluído.`) }
+      else { await deleteTransfer(item.id); setNotice(`Transferência #${item.id} excluída e estoque devolvido.`) }
+      refresh()
+    } catch (e) {
+      if (e.status === 401) expired.current()
+      else setError(e.message)
+    } finally { lock.current = false; setSaving(false) }
+  }
   function choose(field, value) { setMovement(v => ({ ...v, [field]: value })); setError(''); setNotice('') }
   const originBalance = preview?.origin.find(p => String(p.produtoId) === movement.produtoId)?.quantidade
   const destinationBalance = preview?.destination.find(p => String(p.produtoId) === movement.produtoId)?.quantidade
@@ -112,9 +128,9 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
   const storeOptions = data.stores.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)
 
   return <section className="dashboard" aria-label="Gestão de estoque">
-    <div className="session-bar"><span>{user.nome} <span className="muted">· {user.email}{isAdmin && ' · Administrador'}</span></span><button className="text-button" onClick={onLeave} disabled={busy || saving}>Sair</button></div>
+    <div className="session-bar"><span>{user.nome} <span className="muted">· {user.email}{isAdmin && ' · Administrador'}</span></span><button className="row-button" onClick={onLeave} disabled={busy || saving}>Sair</button></div>
     <nav className="navigation" aria-label="Módulos">{sections.map(name => <button key={name} aria-current={section === name ? 'page' : undefined} onClick={() => navigate(name)} disabled={saving}>{name}</button>)}</nav>
-    <div className="page-heading"><div><h2>{section === 'API' ? 'Acesso à API' : section}</h2><p className="muted">{({ Produtos: 'Cadastre e consulte o catálogo de produtos.', Estoque: 'Consulte a quantidade disponível em cada loja.', Transferências: 'Movimente produtos entre lojas.', Histórico: 'Operações concluídas, da mais recente para a mais antiga.', Funcionários: 'Cadastre funcionários e acompanhe o que cada um fez.', Edições: 'Alterações de produtos feitas pelos administradores.', API: 'Explore os endpoints usando a sessão atual.' })[section]}</p></div>{section !== 'API' && <button className="secondary-button compact" onClick={refresh} disabled={saving || loading}>Atualizar</button>}</div>
+    <div className="page-heading"><div><h2>{section === 'API' ? 'Acesso à API' : section}</h2><p className="muted">{({ Produtos: 'Cadastre e consulte o catálogo de produtos.', Estoque: 'Consulte a quantidade disponível em cada loja.', Transferências: 'Movimente produtos entre lojas.', Histórico: 'Operações concluídas, da mais recente para a mais antiga.', Funcionários: 'Cadastre funcionários e acompanhe o que cada um fez.', Edições: 'Alterações e exclusões feitas pelos administradores.', API: 'Explore os endpoints usando a sessão atual.' })[section]}</p></div>{section !== 'API' && <button className="secondary-button compact" onClick={refresh} disabled={saving || loading}>Atualizar</button>}</div>
     {accountMessage}
     {error && <p className="message error" role="alert">{error}</p>}
     {notice && <p className="message success" role="status">{notice}</p>}
@@ -129,7 +145,7 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
         <button className="primary-button compact" disabled={disabled}>{saving ? 'Cadastrando…' : 'Cadastrar produto'}</button>
       </form>
       {editingProduct && <ProdutoEditor key={editingProduct.id} product={editingProduct} stores={data.stores} onExpired={onExpiredStable} onCancel={() => setEditingProduct(null)} onSaved={saved => { setEditingProduct(null); setError(''); setNotice(`Produto ${saved.codigo} atualizado.`); refresh() }} />}
-      {!loading && !loadError && <Table headers={isAdmin ? ['Código', 'Nome', 'ID', 'Ações'] : ['Código', 'Nome', 'ID']} empty={!data.products.length}>{data.products.map(p => <tr key={p.id}><td className="code">{p.codigo}</td><td>{p.nome}</td><td>{p.id}</td>{isAdmin && <td><button className="text-button" onClick={() => { setEditingProduct(p); setNotice(''); setError('') }} disabled={saving}>Editar</button></td>}</tr>)}</Table>}
+      {!loading && !loadError && <Table headers={isAdmin ? ['Código', 'Nome', 'ID', 'Ações'] : ['Código', 'Nome', 'ID']} empty={!data.products.length}>{data.products.map(p => <tr key={p.id}><td className="code">{p.codigo}</td><td>{p.nome}</td><td>{p.id}</td>{isAdmin && <td><div className="row-actions"><button className="row-button" onClick={() => { setEditingProduct(p); setNotice(''); setError('') }} disabled={saving}>Editar</button><button className="row-button danger" onClick={() => remove('product', p)} disabled={saving}>Excluir</button></div></td>}</tr>)}</Table>}
     </>}
     {section === 'Estoque' && <>
       <div className="filter"><label htmlFor="stock-store">Loja</label><select id="stock-store" value={storeId} onChange={e => setStoreId(e.target.value)} disabled={disabled}>{storeOptions}</select></div>
@@ -149,8 +165,8 @@ export default function Dashboard({ user, onLeave, onExpired, busy, apiTools, ac
       </form>
       <p className="muted">O saldo é conferido ao confirmar. O responsável e o horário são registrados automaticamente.</p>
     </>}
-    {section === 'Histórico' && !loading && !loadError && <Table headers={['Nº', 'Data e hora', 'Produto', 'Origem', 'Destino', 'Quantidade', 'Responsável']} empty={!data.transfers.length}>{data.transfers.map(t => <tr key={t.id}><td>{t.id}</td><td className="nowrap">{dateFormat.format(new Date(t.dataHora))}</td><td><span className="code">{t.produto.codigo}</span><br />{t.produto.nome}</td><td>{t.lojaOrigem.nome}</td><td>{t.lojaDestino.nome}</td><td className="quantity">{t.quantidade}</td><td>{t.usuario.nome}</td></tr>)}</Table>}
-    {section === 'Edições' && !loading && !loadError && <Table headers={['Data e hora', 'Produto', 'O que mudou', 'Responsável']} empty={!data.edits.length}>{data.edits.map(e => <tr key={e.id}><td className="nowrap">{dateFormat.format(new Date(e.dataHora))}</td><td><span className="code">{e.produto.codigo}</span><br />{e.produto.nome}</td><td>{e.alteracoes.split('; ').map((m, i) => <div key={i}>{m}</div>)}</td><td>{e.usuario.nome}</td></tr>)}</Table>}
+    {section === 'Histórico' && !loading && !loadError && <Table headers={['Nº', 'Data e hora', 'Produto', 'Origem', 'Destino', 'Quantidade', 'Responsável', ...(isAdmin ? ['Ações'] : [])]} empty={!data.transfers.length}>{data.transfers.map(t => <tr key={t.id}><td>{t.id}</td><td className="nowrap">{dateFormat.format(new Date(t.dataHora))}</td><td><span className="code">{t.produto.codigo}</span><br />{t.produto.nome}</td><td>{t.lojaOrigem.nome}</td><td>{t.lojaDestino.nome}</td><td className="quantity">{t.quantidade}</td><td>{t.usuario.nome}</td>{isAdmin && <td><div className="row-actions"><button className="row-button danger" onClick={() => remove('transfer', t)} disabled={saving}>Excluir</button></div></td>}</tr>)}</Table>}
+    {section === 'Edições' && !loading && !loadError && <Table headers={['Data e hora', 'Ação', 'Produto', 'O que mudou', 'Responsável']} empty={!data.edits.length}>{data.edits.map(e => <tr key={e.id}><td className="nowrap">{dateFormat.format(new Date(e.dataHora))}</td><td>{({ EDICAO: 'Edição', EXCLUSAO_PRODUTO: 'Exclusão de produto', EXCLUSAO_TRANSFERENCIA: 'Exclusão de transferência' })[e.acao] || e.acao}</td><td><span className="code">{e.produto.codigo}</span><br />{e.produto.nome}</td><td>{e.alteracoes.split('; ').map((m, i) => <div key={i}>{m}</div>)}</td><td>{e.usuario.nome}</td></tr>)}</Table>}
     {section === 'Funcionários' && isAdmin && <Funcionarios user={user} revision={revision} onExpired={() => expired.current()} />}
     {section === 'API' && apiTools}
   </section>

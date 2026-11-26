@@ -23,6 +23,13 @@ public class TransferenciaController {
         return ResponseEntity.status(201).body(transferencias.transferir(entrada, funcionario.getUsuario().id()));
     }
 
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Excluir transferência e devolver o estoque à origem (somente administrador)")
+    public ResponseEntity<Void> excluir(@PathVariable Long id, @AuthenticationPrincipal FuncionarioPrincipal admin) {
+        transferencias.excluir(id, admin.getUsuario().id());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     @Operation(summary = "Consultar histórico do mais recente para o mais antigo")
     public List<TransferenciaResponse> historico() { return transferencias.historico(); }

@@ -36,6 +36,13 @@ public class ProdutoController {
         return produtos.atualizar(id, entrada, admin.getUsuario().id());
     }
 
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Excluir produto (somente administrador); o histórico é preservado")
+    public ResponseEntity<Void> excluir(@PathVariable Long id, @AuthenticationPrincipal FuncionarioPrincipal admin) {
+        produtos.excluir(id, admin.getUsuario().id());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/edicoes")
     @Operation(summary = "Edições de produtos feitas pelos administradores, da mais recente para a mais antiga")
     public List<ProdutoEdicaoResponse> edicoes() { return produtos.edicoes(); }

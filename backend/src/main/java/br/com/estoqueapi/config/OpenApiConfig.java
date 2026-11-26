@@ -58,6 +58,12 @@ public class OpenApiConfig {
             if (method == PathItem.HttpMethod.POST) {
                 operation.getResponses().addApiResponse("403", erro("Token CSRF ausente ou inválido"));
             }
+            if ((path.equals("/api/produtos/{id}") || path.equals("/api/transferencias/{id}")) && method == PathItem.HttpMethod.DELETE) {
+                operation.addParametersItem(new Parameter().name("X-CSRF-TOKEN").in("header").required(true).schema(new StringSchema()));
+                operation.getResponses().addApiResponse("403", erro("Restrito a administradores ou CSRF inválido"));
+                operation.getResponses().addApiResponse("404", erro("Recurso inexistente"));
+                if (path.startsWith("/api/transferencias")) operation.getResponses().addApiResponse("409", erro("Destino sem saldo para devolver"));
+            }
             if (path.equals("/api/produtos/{id}") && method == PathItem.HttpMethod.PUT) {
                 operation.addParametersItem(new Parameter().name("X-CSRF-TOKEN").in("header").required(true).schema(new StringSchema()));
                 operation.getResponses().addApiResponse("403", erro("Restrito a administradores ou CSRF inválido"));

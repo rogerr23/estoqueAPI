@@ -3,7 +3,7 @@ import { employees, employeeActivity, createEmployee, updateEmployee, deactivate
 
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 const empty = { nome: '', email: '', senha: '', perfil: 'FUNCIONARIO', ativo: true }
-const activityLabel = { TRANSFERENCIA: 'Transferência', CADASTRO_PRODUTO: 'Cadastro de produto', EDICAO_PRODUTO: 'Edição de produto' }
+const activityLabel = { TRANSFERENCIA: 'Transferência', CADASTRO_PRODUTO: 'Cadastro de produto', EDICAO_PRODUTO: 'Edição de produto', EXCLUSAO_PRODUTO: 'Exclusão de produto', EXCLUSAO_TRANSFERENCIA: 'Exclusão de transferência' }
 
 export default function Funcionarios({ user, revision, onExpired }) {
   const [list, setList] = useState([])
@@ -85,15 +85,15 @@ export default function Funcionarios({ user, revision, onExpired }) {
           <td className="quantity">{u.unidadesTransferidas}</td>
           <td className="quantity">{u.produtosCadastrados}</td>
           <td className="nowrap">{u.ultimaAtividade ? dateFormat.format(new Date(u.ultimaAtividade)) : '—'}</td>
-          <td className="row-actions">
-            <button className="text-button" onClick={() => setSelected(u)}>Ver atividades</button>
-            <button className="text-button" onClick={() => edit(u)}>Editar</button>
-            {u.ativo && u.id !== user.id && <button className="text-button danger" onClick={() => deactivate(u)}>Desativar</button>}
-          </td>
+          <td><div className="row-actions">
+            <button className="row-button" onClick={() => setSelected(u)}>Ver atividades</button>
+            <button className="row-button" onClick={() => edit(u)}>Editar</button>
+            {u.ativo && u.id !== user.id && <button className="row-button danger" onClick={() => deactivate(u)}>Desativar</button>}
+          </div></td>
         </tr>)}</tbody></table></div>}
 
     {selected && <section className="activity" aria-label={`Atividades de ${selected.nome}`}>
-      <div className="page-heading"><h3>Atividades de {selected.nome}</h3><button className="text-button" onClick={() => setSelected(null)}>Fechar</button></div>
+      <div className="page-heading"><h3>Atividades de {selected.nome}</h3><button className="row-button" onClick={() => setSelected(null)}>Fechar</button></div>
       {!activity ? <p role="status" className="muted">Carregando atividades…</p> : !activity.length ? <p className="empty">Nenhuma atividade registrada.</p> :
         <div className="table-scroll"><table><thead><tr><th scope="col">Data e hora</th><th scope="col">Tipo</th><th scope="col">Descrição</th></tr></thead>
           <tbody>{activity.map((a, i) => <tr key={i}><td className="nowrap">{a.dataHora ? dateFormat.format(new Date(a.dataHora)) : '—'}</td><td>{activityLabel[a.tipo] || a.tipo}</td><td>{a.descricao}</td></tr>)}</tbody></table></div>}

@@ -8,6 +8,7 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     boolean existsByCodigo(String codigo);
     boolean existsByCodigoAndIdNot(String codigo, Long id);
     java.util.List<Produto> findAllByOrderByIdAsc();
+    java.util.List<Produto> findAllByAtivoTrueOrderByIdAsc();
     java.util.List<Produto> findAllByCadastradoPorIdOrderByCadastradoEmDescIdDesc(Long usuarioId);
     /** Linhas: usuarioId, produtos cadastrados, último cadastro. */
     @org.springframework.data.jpa.repository.Query("select p.cadastradoPor.id, count(p), max(p.cadastradoEm) from Produto p where p.cadastradoPor is not null group by p.cadastradoPor.id")

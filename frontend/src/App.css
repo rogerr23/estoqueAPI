@@ -88,9 +88,12 @@ td { overflow-wrap: anywhere; min-width: 80px; }
 .checkbox input { width: auto; margin: 0; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; background: #dce8f5; color: var(--navy); font-size: 12px; font-weight: 600; }
 .badge.off { background: #eceef0; color: var(--muted); }
-.row-actions { white-space: nowrap; }
-.row-actions .text-button { padding: 4px 6px; }
-.text-button.danger { color: #8a3434; }
+.row-actions { display: flex; gap: 8px; flex-wrap: nowrap; }
+.row-button { padding: 6px 12px; border-radius: 3px; border: 1px solid #b9c3cf; background: #eef2f6; color: var(--navy); font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.row-button:hover:not(:disabled) { background: #dce5ee; border-color: var(--navy); }
+.row-button.danger { border-color: #d8b9b9; background: #fbf2f2; color: #8a3434; }
+.row-button.danger:hover:not(:disabled) { background: #f3dede; border-color: #8a3434; }
+.row-button:disabled { opacity: .5; cursor: not-allowed; }
 tbody tr.selected { background: #e8eef6 !important; }
 .activity { margin-top: 24px; }
 .activity .page-heading h3 { margin: 0; }

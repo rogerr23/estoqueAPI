@@ -25,6 +25,10 @@ public class ProdutoEdicao {
     @Column(nullable = false, length = 2000)
     private String alteracoes;
 
+    /** EDICAO, EXCLUSAO_PRODUTO ou EXCLUSAO_TRANSFERENCIA. */
+    @Column(nullable = false, length = 30)
+    private String acao = "EDICAO";
+
     protected ProdutoEdicao() {}
 
     public ProdutoEdicao(Produto produto, Usuario usuario, Instant dataHora, String alteracoes) {
@@ -34,9 +38,15 @@ public class ProdutoEdicao {
         this.alteracoes = alteracoes;
     }
 
+    public ProdutoEdicao(Produto produto, Usuario usuario, Instant dataHora, String alteracoes, String acao) {
+        this(produto, usuario, dataHora, alteracoes);
+        this.acao = acao;
+    }
+
     public Long getId() { return id; }
     public Produto getProduto() { return produto; }
     public Usuario getUsuario() { return usuario; }
     public Instant getDataHora() { return dataHora; }
     public String getAlteracoes() { return alteracoes; }
+    public String getAcao() { return acao; }
 }

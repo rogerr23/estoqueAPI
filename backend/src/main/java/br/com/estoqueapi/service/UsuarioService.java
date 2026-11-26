@@ -91,7 +91,13 @@ public class UsuarioService {
         produtos.findAllByCadastradoPorIdOrderByCadastradoEmDescIdDesc(id).forEach(p -> lista.add(new AtividadeResponse(
             "CADASTRO_PRODUTO", p.getCadastradoEm(), "Cadastrou o produto %s (%s)".formatted(p.getCodigo(), p.getNome()))));
         edicoes.findAllByUsuarioIdOrderByDataHoraDescIdDesc(id).forEach(e -> lista.add(new AtividadeResponse(
-            "EDICAO_PRODUTO", e.getDataHora(), "Editou o produto %s: %s".formatted(e.getProduto().getCodigo(), e.getAlteracoes()))));
+            switch (e.getAcao()) {
+                case "EXCLUSAO_PRODUTO" -> "EXCLUSAO_PRODUTO";
+                case "EXCLUSAO_TRANSFERENCIA" -> "EXCLUSAO_TRANSFERENCIA";
+                default -> "EDICAO_PRODUTO";
+            }, e.getDataHora(), "EDICAO".equals(e.getAcao())
+                ? "Editou o produto %s: %s".formatted(e.getProduto().getCodigo(), e.getAlteracoes())
+                : e.getAlteracoes())));
         lista.sort(Comparator.comparing(AtividadeResponse::dataHora, Comparator.nullsLast(Comparator.reverseOrder())));
         return lista;
     }

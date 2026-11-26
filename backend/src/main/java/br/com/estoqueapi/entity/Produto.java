@@ -23,6 +23,9 @@ public class Produto {
     @Column(name = "cadastrado_em")
     private Instant cadastradoEm;
 
+    @Column(nullable = false)
+    private boolean ativo = true;
+
     protected Produto() {}
 
     public Produto(String codigo, String nome) {
@@ -41,6 +44,8 @@ public class Produto {
         this.nome = nome;
     }
 
+    public void excluir() { this.ativo = false; }
+    public boolean isAtivo() { return ativo; }
     public Long getId() { return id; }
     public String getCodigo() { return codigo; }
     public String getNome() { return nome; }

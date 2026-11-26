@@ -86,3 +86,5 @@ export const updateEmployee = (id, data) => send('PUT', `/api/usuarios/${id}`, d
 export const deactivateEmployee = (id) => send('DELETE', `/api/usuarios/${id}`)
 export const updateProduct = (id, data) => send('PUT', `/api/produtos/${id}`, data)
 export const productEdits = (signal) => request('/api/produtos/edicoes', { signal })
+export const deleteProduct = (id) => send('DELETE', `/api/produtos/${id}`)
+export const deleteTransfer = (id) => send('DELETE', `/api/transferencias/${id}`)
